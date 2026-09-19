@@ -25,13 +25,18 @@ A mobile-first PWA for window cleaners to maintain their standard job prices bef
 
 - `artifacts/window-cleaning-quotes/src/pages/home.tsx` — Home placeholder screen
 - `artifacts/window-cleaning-quotes/src/pages/settings.tsx` — editable price settings screen
+- `artifacts/window-cleaning-quotes/src/pages/quote.tsx` — new and editable quote form
+- `artifacts/window-cleaning-quotes/src/pages/review.tsx` — read-only saved quote review
 - `artifacts/window-cleaning-quotes/src/lib/prices.ts` — replaceable local price persistence layer
+- `artifacts/window-cleaning-quotes/src/lib/quotes.ts` — replaceable saved quote persistence layer
 - `artifacts/window-cleaning-quotes/src/components/app-shell.tsx` — shared app header and bottom navigation
 
 ## Architecture decisions
 
 - Phase one is frontend-only and stores prices in browser local storage.
 - Price persistence is isolated behind `src/lib/prices.ts` so a backend can replace it later without changing the screens.
+- Saved quotes use a separate local storage layer and snapshot the prices used when each quote is saved.
+- Editing a saved quote preserves its stable ID and creation timestamp instead of creating a duplicate.
 - The app uses path-aware React Router navigation and a fixed mobile bottom navigation shell.
 
 ## Product
@@ -39,6 +44,7 @@ A mobile-first PWA for window cleaners to maintain their standard job prices bef
 - Home screen placeholder with local/offline storage messaging.
 - Settings screen with six editable prices in pounds and explicit save feedback.
 - Values persist between refreshes and browser sessions on the same device.
+- New quotes can be saved, reviewed, edited in place, and deleted with confirmation.
 
 ## User preferences
 

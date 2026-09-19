@@ -836,6 +836,298 @@ a {
   margin-top: 1.1rem;
 }
 
+.saved-quotes-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.75rem;
+}
+
+.saved-quotes-heading .section-label {
+  margin: 0 0 0.26rem;
+}
+
+.saved-quotes-copy {
+  margin: 0;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.8rem;
+}
+
+.saved-count {
+  display: grid;
+  min-width: 1.8rem;
+  height: 1.8rem;
+  place-items: center;
+  border-radius: 999px;
+  background: hsl(var(--secondary));
+  color: hsl(var(--primary));
+  font-family: var(--app-font-mono);
+  font-size: 0.7rem;
+}
+
+.saved-quotes-list {
+  display: grid;
+  gap: 0.62rem;
+  margin-top: 0.8rem;
+}
+
+.saved-quote-card {
+  display: flex;
+  min-height: 4.55rem;
+  align-items: center;
+  gap: 0.72rem;
+  padding: 0.78rem 0.78rem 0.78rem 0.9rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: 1rem;
+  background: hsl(var(--card));
+  box-shadow: 0 5px 14px rgba(28, 55, 63, 0.035);
+  transition: border-color 160ms ease, transform 160ms ease, background-color 160ms ease;
+}
+
+.saved-quote-card:hover {
+  border-color: hsl(var(--primary) / 0.35);
+  background: hsl(var(--secondary) / 0.28);
+  transform: translateY(-1px);
+}
+
+.saved-quote-icon,
+.saved-empty-icon {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 0.72rem;
+  background: hsl(var(--accent) / 0.38);
+  color: hsl(var(--foreground));
+}
+
+.saved-quote-copy {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: 0.3rem;
+}
+
+.saved-quote-copy strong {
+  overflow: hidden;
+  font-size: 0.88rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.saved-quote-copy span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  color: hsl(var(--muted-foreground));
+  font-family: var(--app-font-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.02em;
+}
+
+.saved-quote-side {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  color: hsl(var(--primary));
+}
+
+.saved-quote-side strong {
+  font-family: var(--app-font-mono);
+  font-size: 0.78rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.saved-quote-side svg {
+  color: hsl(var(--muted-foreground));
+}
+
+.saved-empty {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.8rem;
+  padding: 1rem;
+  border: 1px dashed hsl(var(--border));
+  border-radius: 1rem;
+  background: hsl(var(--card) / 0.56);
+}
+
+.saved-empty-icon {
+  background: hsl(var(--secondary));
+  color: hsl(var(--primary));
+}
+
+.saved-empty-title {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.saved-empty-copy {
+  margin: 0.2rem 0 0;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.75rem;
+}
+
+.review-meta-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.6rem;
+  padding: 1rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: 1.1rem;
+  background: hsl(var(--card));
+  box-shadow: 0 7px 16px rgba(28, 55, 63, 0.04);
+}
+
+.review-meta-card .quote-field-label {
+  margin-bottom: 0.35rem;
+}
+
+.review-address {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.review-date {
+  margin: 0.2rem 0 0;
+  color: hsl(var(--muted-foreground));
+  font-family: var(--app-font-mono);
+  font-size: 0.65rem;
+  white-space: nowrap;
+}
+
+.review-section-heading {
+  margin-top: 1.25rem;
+}
+
+.review-save-notice {
+  display: inline-flex;
+  margin: 1rem 0 0;
+  padding: 0.58rem 0.72rem;
+  border: 1px solid hsl(155 43% 43% / 0.2);
+  border-radius: 0.7rem;
+  background: hsl(155 43% 43% / 0.09);
+  color: hsl(155 43% 30%);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.review-item {
+  align-items: flex-start;
+}
+
+.review-line-total {
+  display: flex;
+  min-width: 6.2rem;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+}
+
+.review-unit-price {
+  color: hsl(var(--muted-foreground));
+  font-family: var(--app-font-mono);
+  font-size: 0.66rem;
+}
+
+.review-line-total .quote-subtotal {
+  font-size: 0.8rem;
+}
+
+.review-actions {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.review-actions .save-button {
+  text-decoration: none;
+}
+
+.danger-button,
+.secondary-button {
+  display: inline-flex;
+  min-height: 3.2rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.9rem;
+  background: transparent;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 700;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.danger-button:hover {
+  border-color: hsl(var(--destructive) / 0.45);
+  background: hsl(var(--destructive) / 0.06);
+  color: hsl(var(--destructive));
+}
+
+.danger-button-solid {
+  border-color: hsl(var(--destructive));
+  background: hsl(var(--destructive));
+  color: hsl(var(--destructive-foreground));
+}
+
+.danger-button-solid:hover {
+  background: hsl(3 57% 35%);
+  color: hsl(var(--destructive-foreground));
+}
+
+.delete-confirmation {
+  padding: 0.85rem;
+  border: 1px solid hsl(var(--destructive) / 0.2);
+  border-radius: 1rem;
+  background: hsl(var(--destructive) / 0.05);
+}
+
+.delete-confirmation p {
+  margin: 0 0 0.75rem;
+  color: hsl(var(--foreground));
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.delete-confirmation-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+}
+
+.delete-confirmation-actions button {
+  min-height: 2.8rem;
+}
+
+.secondary-button {
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+}
+
+.empty-state {
+  padding-top: 3rem;
+}
+
+.empty-state-action {
+  display: inline-flex;
+  width: auto;
+  margin-top: 1.5rem;
+  padding: 0 1rem;
+  text-decoration: none;
+}
+
 @media (max-width: 420px) {
   .quote-item {
     align-items: flex-start;
@@ -847,6 +1139,19 @@ a {
 
   .quantity-stepper {
     width: 2.45rem;
+  }
+
+  .review-meta-card {
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .review-date {
+    margin: 0;
+  }
+
+  .saved-quote-side strong {
+    font-size: 0.72rem;
   }
 }
 

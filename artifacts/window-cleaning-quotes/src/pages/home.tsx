@@ -1,8 +1,29 @@
-import { ArrowUpRight, CircleCheck, ClipboardPlus, Settings2 } from 'lucide-react';
-import { Link } from 'wouter';
+import { ArrowUpRight, CalendarDays, ChevronRight, CircleCheck, ClipboardPlus, FileText, Settings2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Link, useLocation } from 'wouter';
 import { AppHeader, AppShell } from '@/components/app-shell';
+import { loadQuotes, type SavedQuote } from '@/lib/quotes';
+
+function pounds(value: number): string {
+  return `£${value.toFixed(2)}`;
+}
+
+function formatDate(value: string): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(new Date(value));
+}
 
 export default function HomePage() {
+  const [location] = useLocation();
+  const [quotes, setQuotes] = useState<SavedQuote[]>([]);
+
+  useEffect(() => {
+    setQuotes(loadQuotes());
+  }, [location]);
+
   return (
     <AppShell>
       <div className="page-wrap">
@@ -48,6 +69,41 @@ export default function HomePage() {
             <ArrowUpRight size={19} />
           </span>
         </Link>
+
+        <div className="saved-quotes-heading">
+          <div>
+            <p className="section-label">Saved quotes</p>
+            <p className="saved-quotes-copy">Recent work, ready to review.</p>
+          </div>
+          {quotes.length > 0 && <span className="saved-count" data-testid="text-saved-quote-count">{quotes.length}</span>}
+        </div>
+
+        {quotes.length === 0 ? (
+          <div className="saved-empty" data-testid="empty-saved-quotes">
+            <span className="saved-empty-icon" aria-hidden="true"><FileText size={19} /></span>
+            <div>
+              <p className="saved-empty-title">No saved quotes yet</p>
+              <p className="saved-empty-copy">Your finished quotes will appear here.</p>
+            </div>
+          </div>
+        ) : (
+          <div className="saved-quotes-list" aria-label="Saved quotes">
+            {quotes.map((quote) => (
+              <Link href={`/quote/${quote.id}`} className="saved-quote-card" key={quote.id} data-testid={`link-saved-quote-${quote.id}`}>
+                <span className="saved-quote-icon" aria-hidden="true"><FileText size={17} /></span>
+                <span className="saved-quote-copy">
+                  <strong data-testid={`text-saved-quote-address-${quote.id}`}>{quote.address || 'No address'}</strong>
+                  <span><CalendarDays size={13} aria-hidden="true" /> {formatDate(quote.createdAt)}</span>
+                </span>
+                <span className="saved-quote-side">
+                  <strong data-testid={`text-saved-quote-total-${quote.id}`}>{pounds(quote.total)}</strong>
+                  <ChevronRight size={17} aria-hidden="true" />
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
+
         <Link href="/settings" className="quick-card" data-testid="link-home-settings">
           <span className="quick-card-copy">
             <span className="quick-card-icon" aria-hidden="true">

@@ -1,35 +1,14 @@
-import {
-  ArrowLeft,
-  Check,
-  CircleAlert,
-  MapPin,
-  Minus,
-  Plus,
-  ReceiptText,
-} from 'lucide-react';
+import { ArrowLeft, Check, CircleAlert, MapPin, Minus, Plus, ReceiptText } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'wouter';
+import { Link, useLocation, useParams } from 'wouter';
 import { AppHeader, AppShell } from '@/components/app-shell';
-import { QUOTE_ITEMS } from '@/lib/quote-items';
 import { loadPrices, type PriceKey, type PriceSettings } from '@/lib/prices';
+import { QUOTE_ITEMS } from '@/lib/quote-items';
+import { getQuote, saveQuote as persistQuote, type SavedQuote, type SavedQuoteLineItem } from '@/lib/quotes';
 
 type QuoteQuantities = Record<PriceKey, number>;
 
-type FinishedQuoteLineItem = {
-  key: PriceKey;
-  label: string;
-  quantity: number;
-  unitPrice: number | null;
-  subtotal: number;
-};
-
-type FinishedQuote = {
-  address: string;
-  lineItems: FinishedQuoteLineItem[];
-  total: number;
-};
-
-type QuoteLine = FinishedQuoteLineItem & {
+type QuoteLine = SavedQuoteLineItem & {
   hint: string;
   isPriced: boolean;
 };
@@ -46,7 +25,11 @@ function pounds(value: number): string {
 }
 
 export default function QuotePage() {
+  const { id } = useParams<{ id: string }>();
+  const [location, setLocation] = useLocation();
+  const isEditing = Boolean(id && location.endsWith('/edit'));
   const [prices, setPrices] = useState<PriceSettings | null>(null);
+  const [savedQuote] = useState<SavedQuote | undefined>(() => (isEditing && id ? getQuote(id) : undefined));
   const [address, setAddress] = useState('');
   const [quantities, setQuantities] = useState<QuoteQuantities>(emptyQuantities);
   const [saveMessage, setSaveMessage] = useState('');
@@ -55,6 +38,17 @@ export default function QuotePage() {
     setPrices(loadPrices());
   }, []);
 
+  useEffect(() => {
+    if (!savedQuote) return;
+    setAddress(savedQuote.address);
+    setQuantities(
+      savedQuote.lineItems.reduce((next, line) => {
+        next[line.key] = line.quantity;
+        return next;
+      }, emptyQuantities()),
+    );
+  }, [savedQuote]);
+
   const lines = useMemo<QuoteLine[]>(() => {
     return QUOTE_ITEMS.map((item) => {
       const rawPrice = prices?.[item.key];
@@ -62,7 +56,6 @@ export default function QuotePage() {
         typeof rawPrice === 'number' && Number.isFinite(rawPrice) && rawPrice > 0
           ? rawPrice
           : null;
-      const isPriced = unitPrice !== null;
       const quantity = quantities[item.key];
 
       return {
@@ -72,7 +65,7 @@ export default function QuotePage() {
         quantity,
         unitPrice,
         subtotal: unitPrice === null ? 0 : quantity * unitPrice,
-        isPriced,
+        isPriced: unitPrice !== null,
       };
     });
   }, [prices, quantities]);
@@ -94,9 +87,11 @@ export default function QuotePage() {
     setSaveMessage('');
   }
 
-  function saveQuote() {
-    const quote: FinishedQuote = {
+  function saveCurrentQuote() {
+    const saved = persistQuote({
+      id: isEditing ? savedQuote?.id : undefined,
       address: address.trim(),
+      total,
       lineItems: lines.map((line) => ({
         key: line.key,
         label: line.label,
@@ -104,11 +99,28 @@ export default function QuotePage() {
         unitPrice: line.unitPrice,
         subtotal: line.subtotal,
       })),
-      total,
-    };
+    });
+    setSaveMessage(isEditing ? 'Quote updated. Opening review…' : 'Quote saved. Opening review…');
+    setLocation(`/quote/${saved.id}?saved=${isEditing ? 'updated' : 'saved'}`);
+  }
 
-    console.info('Quote prepared (not persisted)', quote);
-    setSaveMessage('Quote ready. Nothing was saved to this device.');
+  if (isEditing && !savedQuote) {
+    return (
+      <AppShell>
+        <div className="page-wrap">
+          <AppHeader />
+          <section className="empty-state" aria-labelledby="missing-edit-title">
+            <p className="eyebrow">Clearpane / archive</p>
+            <h1 className="page-heading" id="missing-edit-title">Quote not found.</h1>
+            <p className="page-intro">This saved quote may have been removed from this device.</p>
+            <Link href="/" className="save-button empty-state-action" data-testid="link-missing-edit-home">
+              <ArrowLeft size={17} aria-hidden="true" />
+              Back to home
+            </Link>
+          </section>
+        </div>
+      </AppShell>
+    );
   }
 
   if (!prices) {
@@ -133,12 +145,14 @@ export default function QuotePage() {
         </Link>
 
         <section aria-labelledby="quote-title">
-          <p className="eyebrow">Clearpane / 02</p>
+          <p className="eyebrow">{isEditing ? 'Clearpane / edit quote' : 'Clearpane / 02'}</p>
           <h1 className="page-heading" id="quote-title">
-            Make a quote.
+            {isEditing ? 'Adjust the quote.' : 'Make a quote.'}
           </h1>
           <p className="page-intro">
-            Count what is in front of you. The total follows as you go.
+            {isEditing
+              ? 'Update the count or address, then save this quote again.'
+              : 'Count what is in front of you. The total follows as you go.'}
           </p>
         </section>
 
@@ -243,14 +257,14 @@ export default function QuotePage() {
             <button
               className="save-button"
               type="button"
-              onClick={saveQuote}
+              onClick={saveCurrentQuote}
               data-testid="button-save-quote"
             >
               <Check size={17} aria-hidden="true" />
-              Save quote
+              {isEditing ? 'Update quote' : 'Save quote'}
             </button>
             <p className={`save-feedback ${saveMessage ? 'is-success' : ''}`} aria-live="polite" data-testid="status-save-quote">
-              {saveMessage || 'This prepares the quote for now. It will not be stored.'}
+              {saveMessage || 'Saved quotes keep these prices, even after Settings changes.'}
             </p>
           </div>
         </div>
