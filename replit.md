@@ -1,10 +1,11 @@
-# [Project name]
+# Window Cleaning Quotes
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A mobile-first PWA for window cleaners to maintain their standard job prices before quoting jobs.
 
 ## Run & Operate
 
 - `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/window-cleaning-quotes run dev` — run the app preview
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
@@ -22,23 +23,30 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/window-cleaning-quotes/src/pages/home.tsx` — Home placeholder screen
+- `artifacts/window-cleaning-quotes/src/pages/settings.tsx` — editable price settings screen
+- `artifacts/window-cleaning-quotes/src/lib/prices.ts` — replaceable local price persistence layer
+- `artifacts/window-cleaning-quotes/src/components/app-shell.tsx` — shared app header and bottom navigation
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Phase one is frontend-only and stores prices in browser local storage.
+- Price persistence is isolated behind `src/lib/prices.ts` so a backend can replace it later without changing the screens.
+- The app uses path-aware React Router navigation and a fixed mobile bottom navigation shell.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Home screen placeholder with local/offline storage messaging.
+- Settings screen with six editable prices in pounds and explicit save feedback.
+- Values persist between refreshes and browser sessions on the same device.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Build the app in phases; keep quote forms and quote lists out until a later phase.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- The Vite config requires `PORT` and `BASE_PATH` when running a direct production build; the managed workflow supplies them automatically.
 
 ## Pointers
 

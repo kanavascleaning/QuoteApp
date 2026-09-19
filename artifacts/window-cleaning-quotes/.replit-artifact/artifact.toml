@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Window Cleaning Quotes"
+description = "A mobile-first quoting companion for window cleaners, starting with saved price settings and a simple home screen."
+version = "1.0.0"
+id = "artifacts/window-cleaning-quotes"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21007
+
+[services.development]
+run = "pnpm --filter @workspace/window-cleaning-quotes run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/window-cleaning-quotes", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/window-cleaning-quotes/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21007"
+BASE_PATH = "/"
