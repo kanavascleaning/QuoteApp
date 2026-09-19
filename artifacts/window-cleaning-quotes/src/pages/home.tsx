@@ -1,4 +1,4 @@
-import { ArrowUpRight, CircleCheck, Settings2 } from 'lucide-react';
+import { ArrowUpRight, CircleCheck, ClipboardPlus, Settings2 } from 'lucide-react';
 import { Link } from 'wouter';
 import { AppHeader, AppShell } from '@/components/app-shell';
 
@@ -34,6 +34,20 @@ export default function HomePage() {
         </section>
 
         <p className="section-label">Quick access</p>
+        <Link href="/quote" className="quick-card" data-testid="link-home-new-quote">
+          <span className="quick-card-copy">
+            <span className="quick-card-icon" aria-hidden="true">
+              <ClipboardPlus size={18} />
+            </span>
+            <span>
+              <span className="quick-card-title">Start a new quote</span>
+              <span className="quick-card-subtitle">Count items · see the total live</span>
+            </span>
+          </span>
+          <span className="arrow-button" aria-hidden="true">
+            <ArrowUpRight size={19} />
+          </span>
+        </Link>
         <Link href="/settings" className="quick-card" data-testid="link-home-settings">
           <span className="quick-card-copy">
             <span className="quick-card-icon" aria-hidden="true">

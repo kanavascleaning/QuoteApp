@@ -1,6 +1,7 @@
 import { Check, LoaderCircle, Settings2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { AppHeader, AppShell } from '@/components/app-shell';
+import { QUOTE_ITEMS } from '@/lib/quote-items';
 import {
   DEFAULT_PRICES,
   loadPrices,
@@ -8,15 +9,6 @@ import {
   type PriceKey,
   type PriceSettings,
 } from '@/lib/prices';
-
-const PRICE_FIELDS: Array<{ key: PriceKey; label: string; hint: string }> = [
-  { key: 'smallWindow', label: 'Small Window', hint: '1 pane' },
-  { key: 'mediumWindow', label: 'Medium Window', hint: '2 panes' },
-  { key: 'largeWindow', label: 'Large Window', hint: '3 panes' },
-  { key: 'bayWindow', label: 'Bay Window', hint: 'Full bay' },
-  { key: 'normalDoor', label: 'Normal Door', hint: 'Single door' },
-  { key: 'frenchDoorSet', label: 'French Door Set', hint: 'Door pair' },
-];
 
 type SaveState = 'idle' | 'saving' | 'saved';
 
@@ -43,7 +35,7 @@ export default function SettingsPage() {
     event.preventDefault();
     if (!prices) return;
 
-    const nextPrices = PRICE_FIELDS.reduce((next, field) => {
+    const nextPrices = QUOTE_ITEMS.reduce((next, field) => {
       const value = Number.parseFloat(draft[field.key]);
       next[field.key] =
         Number.isFinite(value) && value >= 0 ? Math.round(value * 100) / 100 : 0;
@@ -94,7 +86,7 @@ export default function SettingsPage() {
 
         <form onSubmit={handleSave} data-testid="form-prices">
           <div className="settings-card">
-            {PRICE_FIELDS.map((field) => (
+            {QUOTE_ITEMS.map((field) => (
               <div className="price-row" key={field.key}>
                 <label className="price-label" htmlFor={`price-${field.key}`}>
                   {field.label}
