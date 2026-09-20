@@ -70,13 +70,14 @@
 }
 
 html {
+  height: 100%;
   min-width: 320px;
   background: hsl(var(--background));
 }
 
 body {
   min-width: 320px;
-  min-height: 100dvh;
+  min-height: 100%;
   margin: 0;
   background:
     radial-gradient(circle at 10% 0%, rgba(203, 222, 217, 0.42), transparent 31rem),
@@ -94,6 +95,7 @@ input {
 button,
 a {
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 a {
@@ -107,7 +109,8 @@ a {
 }
 
 .app-shell {
-  min-height: 100dvh;
+  min-height: 100svh;
+  padding-top: env(safe-area-inset-top);
   padding-bottom: calc(5.6rem + env(safe-area-inset-bottom));
 }
 
@@ -442,6 +445,11 @@ a {
   transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
 }
 
+.price-input:invalid,
+.price-input[aria-invalid='true'] {
+  border-color: hsl(var(--destructive) / 0.7);
+}
+
 .price-input::placeholder {
   color: hsl(var(--muted-foreground) / 0.55);
 }
@@ -502,6 +510,14 @@ a {
 
 .save-feedback.is-success {
   color: hsl(155 43% 34%);
+}
+
+.form-validation-message {
+  margin: 0.68rem 0 0;
+  color: hsl(var(--destructive));
+  font-size: 0.78rem;
+  line-height: 1.4;
+  text-align: center;
 }
 
 .bottom-nav {
@@ -568,7 +584,7 @@ a {
 }
 
 .quote-page {
-  padding-bottom: 2rem;
+  padding-bottom: calc(2rem + env(safe-area-inset-bottom));
 }
 
 .quote-skeleton {
@@ -1120,6 +1136,17 @@ a {
   padding-top: 3rem;
 }
 
+.compact-empty-state {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border: 1px dashed hsl(var(--border));
+  border-radius: 1rem;
+  background: hsl(var(--card) / 0.56);
+}
+
 .empty-state-action {
   display: inline-flex;
   width: auto;
@@ -1152,6 +1179,12 @@ a {
 
   .saved-quote-side strong {
     font-size: 0.72rem;
+  }
+}
+
+@media (max-height: 600px) {
+  .save-zone {
+    position: static;
   }
 }
 

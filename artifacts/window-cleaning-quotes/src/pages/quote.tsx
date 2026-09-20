@@ -82,7 +82,7 @@ export default function QuotePage() {
   function changeQuantity(key: PriceKey, adjustment: number) {
     setQuantities((current) => ({
       ...current,
-      [key]: Math.max(0, current[key] + adjustment),
+      [key]: Math.max(0, Math.floor(current[key] + adjustment)),
     }));
     setSaveMessage('');
   }
@@ -173,6 +173,12 @@ export default function QuotePage() {
               }}
               placeholder="Number and street"
               autoComplete="street-address"
+              enterKeyHint="done"
+              onFocus={(event) => {
+                window.requestAnimationFrame(() => {
+                  event.currentTarget.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                });
+              }}
               data-testid="input-quote-address"
             />
           </div>

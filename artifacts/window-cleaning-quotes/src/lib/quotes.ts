@@ -39,6 +39,7 @@ function isValidLineItem(value: unknown): value is SavedQuoteLineItem {
     typeof line.label === 'string' &&
     typeof line.quantity === 'number' &&
     Number.isFinite(line.quantity) &&
+    Number.isInteger(line.quantity) &&
     line.quantity >= 0 &&
     (line.unitPrice === null ||
       (typeof line.unitPrice === 'number' &&

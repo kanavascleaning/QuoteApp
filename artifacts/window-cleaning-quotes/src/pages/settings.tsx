@@ -18,6 +18,7 @@ export default function SettingsPage() {
     toDraft(DEFAULT_PRICES),
   );
   const [saveState, setSaveState] = useState<SaveState>('idle');
+  const [validationMessage, setValidationMessage] = useState('');
 
   useEffect(() => {
     const loaded = loadPrices();
@@ -26,14 +27,26 @@ export default function SettingsPage() {
   }, []);
 
   function updatePrice(key: PriceKey, value: string) {
-    const cleanValue = value.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1');
+    const cleanValue = normalisePriceInput(value);
     setDraft((current) => ({ ...current, [key]: cleanValue }));
     setSaveState('idle');
+    setValidationMessage('');
   }
 
   function handleSave(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!prices) return;
+
+    const invalidFields = QUOTE_ITEMS.filter(({ key }) => {
+      return isInvalidPriceInput(draft[key]);
+    });
+
+    if (invalidFields.length > 0) {
+      setValidationMessage(
+        `${invalidFields.map((field) => field.label).join(', ')} ${invalidFields.length === 1 ? 'has' : 'have'} an invalid price. Use zero or a positive amount.`,
+      );
+      return;
+    }
 
     const nextPrices = QUOTE_ITEMS.reduce((next, field) => {
       const value = Number.parseFloat(draft[field.key]);
@@ -84,6 +97,18 @@ export default function SettingsPage() {
           </p>
         </section>
 
+        {!Object.values(prices).some((price) => price > 0) && (
+          <div className="empty-state compact-empty-state" role="status" data-testid="empty-prices-state">
+            <span className="saved-empty-icon" aria-hidden="true">
+              <Settings2 size={19} />
+            </span>
+            <div>
+              <p className="saved-empty-title">No prices set yet</p>
+              <p className="saved-empty-copy">Add a rate for each item, then save your rate card.</p>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSave} data-testid="form-prices">
           <div className="settings-card">
             {QUOTE_ITEMS.map((field) => (
@@ -100,15 +125,24 @@ export default function SettingsPage() {
                     id={`price-${field.key}`}
                     inputMode="decimal"
                     min="0"
+                    step="0.01"
                     onChange={(event) => updatePrice(field.key, event.target.value)}
                     placeholder="0.00"
-                    type="text"
+                    type="number"
                     value={draft[field.key]}
                     aria-label={`${field.label} price in pounds`}
+                    aria-describedby={`price-hint-${field.key}`}
+                    aria-invalid={isInvalidPriceInput(draft[field.key])}
+                    enterKeyHint="done"
+                    onFocus={(event) => {
+                      window.requestAnimationFrame(() => {
+                        event.currentTarget.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                      });
+                    }}
                     data-testid={`input-price-${field.key}`}
                   />
                 </div>
-                <span className="price-hint">{field.hint}</span>
+                <span className="price-hint" id={`price-hint-${field.key}`}>{field.hint}</span>
               </div>
             ))}
           </div>
@@ -134,6 +168,11 @@ export default function SettingsPage() {
                 'Save prices'
               )}
             </button>
+            {validationMessage && (
+              <p className="form-validation-message" role="alert" data-testid="status-price-validation">
+                {validationMessage}
+              </p>
+            )}
             <p
               className={`save-feedback ${saveState === 'saved' ? 'is-success' : ''}`}
               aria-live="polite"
@@ -148,6 +187,20 @@ export default function SettingsPage() {
       </div>
     </AppShell>
   );
+}
+
+function normalisePriceInput(value: string): string {
+  const cleaned = value.replace(/[^\d.-]/g, '');
+  const sign = cleaned.startsWith('-') ? '-' : '';
+  const unsigned = cleaned.replace(/-/g, '').replace(/(\..*)\./g, '$1');
+  return `${sign}${unsigned}`;
+}
+
+function isInvalidPriceInput(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  const parsed = Number.parseFloat(trimmed);
+  return trimmed.startsWith('-') || !Number.isFinite(parsed) || parsed < 0;
 }
 
 function toDraft(prices: PriceSettings): Record<PriceKey, string> {

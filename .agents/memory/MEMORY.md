@@ -1,0 +1,1 @@
+- [Android build toolchain](android-build-toolchain.md) — the Capacitor Android wrapper targets SDK 36 and Java 21; this workspace does not include the native toolchain.
