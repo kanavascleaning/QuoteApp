@@ -1,7 +1,8 @@
-import { ArrowLeft, CircleAlert, Edit3, MapPin, ReceiptText, Trash2 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { ArrowLeft, CircleAlert, Edit3, List, MapPin, ReceiptText, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useParams } from 'wouter';
 import { AppHeader, AppShell } from '@/components/app-shell';
+import { loadPriceLists, type PriceList } from '@/lib/prices';
 import { QUOTE_ITEMS } from '@/lib/quote-items';
 import { deleteQuote, getQuote, type SavedQuote } from '@/lib/quotes';
 
@@ -21,7 +22,12 @@ export default function ReviewPage() {
   const { id } = useParams<{ id: string }>();
   const [location, setLocation] = useLocation();
   const [quote, setQuote] = useState<SavedQuote | undefined>(() => (id ? getQuote(id) : undefined));
+  const [priceLists, setPriceLists] = useState<PriceList[] | null>(null);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+
+  useEffect(() => {
+    setPriceLists(loadPriceLists());
+  }, []);
 
   const lines = useMemo(
     () =>
@@ -56,6 +62,10 @@ export default function ReviewPage() {
     );
   }
 
+  const sourcePriceList = priceLists?.find((list) => list.id === quote.priceListId);
+  const priceListName = quote.priceListName ?? 'Saved prices from older quote';
+  const priceListStatus = quote.priceListId && !sourcePriceList ? ' — no longer available' : '';
+
   return (
     <AppShell>
       <div className="page-wrap quote-page">
@@ -88,7 +98,18 @@ export default function ReviewPage() {
               {quote.address || 'No address'}
             </p>
           </div>
-          <p className="review-date" data-testid="text-review-date">{formatDate(quote.createdAt)}</p>
+          <div className="review-meta-details">
+            <div>
+              <p className="quote-field-label">
+                <List size={16} aria-hidden="true" />
+                Price list
+              </p>
+              <p className="review-address" data-testid="text-review-price-list">
+                {priceListName}{priceListStatus}
+              </p>
+            </div>
+            <p className="review-date" data-testid="text-review-date">{formatDate(quote.createdAt)}</p>
+          </div>
         </div>
 
         <div className="quote-section-heading review-section-heading">

@@ -12,6 +12,8 @@ export type SavedQuoteLineItem = {
 export type SavedQuote = {
   id: string;
   address: string;
+  priceListId?: string;
+  priceListName?: string;
   createdAt: string;
   updatedAt?: string;
   total: number;
@@ -21,6 +23,8 @@ export type SavedQuote = {
 export type SaveQuoteInput = {
   id?: string;
   address: string;
+  priceListId?: string;
+  priceListName?: string;
   total: number;
   lineItems: SavedQuoteLineItem[];
 };
@@ -59,6 +63,8 @@ function isValidQuote(value: unknown): value is SavedQuote {
     typeof quote.id === 'string' &&
     quote.id.length > 0 &&
     typeof quote.address === 'string' &&
+    (quote.priceListId === undefined || typeof quote.priceListId === 'string') &&
+    (quote.priceListName === undefined || typeof quote.priceListName === 'string') &&
     typeof quote.createdAt === 'string' &&
     !Number.isNaN(Date.parse(quote.createdAt)) &&
     typeof quote.total === 'number' &&
@@ -107,6 +113,8 @@ export function saveQuote(input: SaveQuoteInput): SavedQuote {
   const saved: SavedQuote = {
     id: existingIndex >= 0 && input.id ? input.id : createId(),
     address: input.address.trim(),
+    priceListId: input.priceListId,
+    priceListName: input.priceListName?.trim() || undefined,
     createdAt: existingIndex >= 0 ? quotes[existingIndex].createdAt : now,
     updatedAt: existingIndex >= 0 ? now : undefined,
     total: input.total,

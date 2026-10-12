@@ -1,46 +1,90 @@
-import { Check, LoaderCircle, Settings2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Check, ListPlus, LoaderCircle, Plus, Settings2, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { AppHeader, AppShell } from '@/components/app-shell';
 import { QUOTE_ITEMS } from '@/lib/quote-items';
 import {
-  DEFAULT_PRICES,
-  loadPrices,
-  savePrices,
+  ZERO_PRICES,
+  createPriceList,
+  deletePriceList,
+  loadPriceLists,
+  updatePriceList,
   type PriceKey,
+  type PriceList,
   type PriceSettings,
 } from '@/lib/prices';
 
 type SaveState = 'idle' | 'saving' | 'saved';
 
 export default function SettingsPage() {
-  const [prices, setPrices] = useState<PriceSettings | null>(null);
-  const [draft, setDraft] = useState<Record<PriceKey, string>>(() =>
-    toDraft(DEFAULT_PRICES),
-  );
+  const [priceLists, setPriceLists] = useState<PriceList[] | null>(null);
+  const [selectedListId, setSelectedListId] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+  const [draftName, setDraftName] = useState('');
+  const [draft, setDraft] = useState<Record<PriceKey, string>>(toDraft(ZERO_PRICES));
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [validationMessage, setValidationMessage] = useState('');
+  const [deleteConfirmationId, setDeleteConfirmationId] = useState<string | null>(null);
 
   useEffect(() => {
-    const loaded = loadPrices();
-    setPrices(loaded);
-    setDraft(toDraft(loaded));
+    const loaded = loadPriceLists();
+    setPriceLists(loaded);
+    setSelectedListId(loaded[0].id);
   }, []);
 
+  const selectedList = useMemo(
+    () => priceLists?.find((list) => list.id === selectedListId),
+    [priceLists, selectedListId],
+  );
+
+  useEffect(() => {
+    if (isCreating) return;
+    if (!selectedList) return;
+    setDraftName(selectedList.name);
+    setDraft(toDraft(selectedList.prices));
+    setSaveState('idle');
+    setValidationMessage('');
+    setDeleteConfirmationId(null);
+  }, [isCreating, selectedList]);
+
+  function selectList(id: string) {
+    setIsCreating(false);
+    setSelectedListId(id);
+  }
+
+  function startCreating() {
+    setIsCreating(true);
+    setSelectedListId('');
+    setDraftName('');
+    setDraft(toDraft(ZERO_PRICES));
+    setSaveState('idle');
+    setValidationMessage('');
+    setDeleteConfirmationId(null);
+  }
+
+  function cancelCreating() {
+    const fallback = priceLists?.[0];
+    if (!fallback) return;
+    setIsCreating(false);
+    setSelectedListId(fallback.id);
+  }
+
   function updatePrice(key: PriceKey, value: string) {
-    const cleanValue = normalisePriceInput(value);
-    setDraft((current) => ({ ...current, [key]: cleanValue }));
+    setDraft((current) => ({ ...current, [key]: normalisePriceInput(value) }));
     setSaveState('idle');
     setValidationMessage('');
   }
 
   function handleSave(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!prices) return;
+    if (!priceLists) return;
 
-    const invalidFields = QUOTE_ITEMS.filter(({ key }) => {
-      return isInvalidPriceInput(draft[key]);
-    });
+    const name = draftName.trim();
+    if (!name) {
+      setValidationMessage('Give this price list a name before saving.');
+      return;
+    }
 
+    const invalidFields = QUOTE_ITEMS.filter(({ key }) => isInvalidPriceInput(draft[key]));
     if (invalidFields.length > 0) {
       setValidationMessage(
         `${invalidFields.map((field) => field.label).join(', ')} ${invalidFields.length === 1 ? 'has' : 'have'} an invalid price. Use zero or a positive amount.`,
@@ -48,32 +92,60 @@ export default function SettingsPage() {
       return;
     }
 
-    const nextPrices = QUOTE_ITEMS.reduce((next, field) => {
-      const value = Number.parseFloat(draft[field.key]);
-      next[field.key] =
-        Number.isFinite(value) && value >= 0 ? Math.round(value * 100) / 100 : 0;
-      return next;
-    }, {} as PriceSettings);
-
+    const prices = draftToPrices(draft);
     setSaveState('saving');
-    savePrices(nextPrices);
-    window.setTimeout(() => {
-      setPrices(nextPrices);
-      setDraft(toDraft(nextPrices));
-      setSaveState('saved');
-    }, 280);
+
+    if (isCreating) {
+      const created = createPriceList(name, prices);
+      setPriceLists(loadPriceLists());
+      setSelectedListId(created.id);
+      setIsCreating(false);
+    } else if (selectedList) {
+      updatePriceList(selectedList.id, { name, prices });
+      setPriceLists(loadPriceLists());
+    }
+
+    window.setTimeout(() => setSaveState('saved'), 220);
   }
 
-  if (!prices) {
+  function requestDelete() {
+    if (!selectedList || !priceLists) return;
+    if (priceLists.length <= 1) {
+      setValidationMessage('Keep at least one price list. Create another list before deleting this one.');
+      return;
+    }
+    setDeleteConfirmationId(selectedList.id);
+    setValidationMessage('');
+  }
+
+  function confirmDelete() {
+    if (!selectedList || !priceLists) return;
+    if (!deletePriceList(selectedList.id)) {
+      setValidationMessage('At least one price list must remain.');
+      setDeleteConfirmationId(null);
+      return;
+    }
+
+    const next = loadPriceLists();
+    setPriceLists(next);
+    setSelectedListId(next[0].id);
+    setDeleteConfirmationId(null);
+    setValidationMessage('');
+  }
+
+  if (!priceLists) {
     return (
       <AppShell>
         <div className="page-wrap">
           <AppHeader />
-          <div className="skeleton-card" aria-label="Loading prices" data-testid="loading-prices" />
+          <div className="skeleton-card" aria-label="Loading price lists" data-testid="loading-price-lists" />
         </div>
       </AppShell>
     );
   }
+
+  const currentPrices = isCreating ? draftToPrices(draft) : selectedList?.prices ?? ZERO_PRICES;
+  const hasPrices = Object.values(currentPrices).some((price) => price > 0);
 
   return (
     <AppShell>
@@ -82,111 +154,201 @@ export default function SettingsPage() {
         <section aria-labelledby="settings-title">
           <div className="settings-heading">
             <div>
-              <p className="eyebrow">Your rate card</p>
-              <h1 className="page-heading" id="settings-title">
-                Set prices once.
-              </h1>
+              <p className="eyebrow">Your rate cards</p>
+              <h1 className="page-heading" id="settings-title">Price by area.</h1>
             </div>
             <span className="settings-heading-icon" aria-hidden="true">
               <Settings2 size={22} />
             </span>
           </div>
           <p className="page-intro">
-            Use simple per-item prices you can trust when you are quoting on
-            site. All amounts are in pounds.
+            Keep a separate rate card for each area you work in. Quotes keep
+            the prices used at the time they were saved.
           </p>
         </section>
 
-        {!Object.values(prices).some((price) => price > 0) && (
-          <div className="empty-state compact-empty-state" role="status" data-testid="empty-prices-state">
-            <span className="saved-empty-icon" aria-hidden="true">
-              <Settings2 size={19} />
-            </span>
+        <section className="price-lists-section" aria-labelledby="price-lists-title">
+          <div className="list-section-heading">
             <div>
-              <p className="saved-empty-title">No prices set yet</p>
-              <p className="saved-empty-copy">Add a rate for each item, then save your rate card.</p>
+              <p className="section-label" id="price-lists-title">Price lists</p>
+              <p className="saved-quotes-copy">Choose a list to edit it.</p>
             </div>
+            <button
+              className="small-action-button"
+              type="button"
+              onClick={startCreating}
+              data-testid="button-new-price-list"
+            >
+              <ListPlus size={16} aria-hidden="true" />
+              New list
+            </button>
           </div>
-        )}
 
-        <form onSubmit={handleSave} data-testid="form-prices">
-          <div className="settings-card">
-            {QUOTE_ITEMS.map((field) => (
-              <div className="price-row" key={field.key}>
-                <label className="price-label" htmlFor={`price-${field.key}`}>
-                  {field.label}
-                </label>
-                <div className="currency-input">
-                  <span className="currency-symbol" aria-hidden="true">
-                    £
-                  </span>
-                  <input
-                    className="price-input"
-                    id={`price-${field.key}`}
-                    inputMode="decimal"
-                    min="0"
-                    step="0.01"
-                    onChange={(event) => updatePrice(field.key, event.target.value)}
-                    placeholder="0.00"
-                    type="number"
-                    value={draft[field.key]}
-                    aria-label={`${field.label} price in pounds`}
-                    aria-describedby={`price-hint-${field.key}`}
-                    aria-invalid={isInvalidPriceInput(draft[field.key])}
-                    enterKeyHint="done"
-                    onFocus={(event) => {
-                      window.requestAnimationFrame(() => {
-                        event.currentTarget.scrollIntoView({ block: 'center', behavior: 'smooth' });
-                      });
-                    }}
-                    data-testid={`input-price-${field.key}`}
-                  />
-                </div>
-                <span className="price-hint" id={`price-hint-${field.key}`}>{field.hint}</span>
-              </div>
+          <div className="price-list-cards" aria-label="Price lists">
+            {priceLists.map((list) => (
+              <button
+                className={`price-list-card ${!isCreating && selectedListId === list.id ? 'is-selected' : ''}`}
+                type="button"
+                key={list.id}
+                onClick={() => selectList(list.id)}
+                data-testid={`button-price-list-${list.id}`}
+              >
+                <span className="price-list-card-copy">
+                  <strong>{list.name}</strong>
+                  <span>{priceSummary(list.prices)}</span>
+                </span>
+                <span className="price-list-card-mark" aria-hidden="true">
+                  {selectedListId === list.id && !isCreating ? <Check size={16} /> : <span />}
+                </span>
+              </button>
             ))}
           </div>
+        </section>
 
-          <div className="save-zone">
-            <button
-              className="save-button"
-              disabled={saveState === 'saving'}
-              type="submit"
-              data-testid="button-save-prices"
-            >
-              {saveState === 'saving' ? (
-                <>
-                  <LoaderCircle size={17} className="animate-spin" aria-hidden="true" />
-                  Saving prices
-                </>
-              ) : saveState === 'saved' ? (
-                <>
-                  <Check size={17} aria-hidden="true" />
-                  Prices saved
-                </>
-              ) : (
-                'Save prices'
-              )}
-            </button>
-            {validationMessage && (
-              <p className="form-validation-message" role="alert" data-testid="status-price-validation">
-                {validationMessage}
+        <section className="price-editor-section" aria-labelledby="price-editor-title">
+          <div className="editor-heading">
+            <div>
+              <p className="section-label" id="price-editor-title">
+                {isCreating ? 'New price list' : 'Edit price list'}
               </p>
+              <p className="saved-quotes-copy">
+                {isCreating ? 'Start with blank prices for a new area.' : 'Changes only affect this list.'}
+              </p>
+            </div>
+            {isCreating && (
+              <button className="text-button" type="button" onClick={cancelCreating} data-testid="button-cancel-new-price-list">
+                Cancel
+              </button>
             )}
-            <p
-              className={`save-feedback ${saveState === 'saved' ? 'is-success' : ''}`}
-              aria-live="polite"
-              data-testid="status-save-prices"
-            >
-              {saveState === 'saved'
-                ? 'Saved on this device. You can use them offline.'
-                : 'Changes are only saved when you tap the button.'}
-            </p>
           </div>
-        </form>
+
+          {!hasPrices && (
+            <div className="empty-state compact-empty-state" role="status" data-testid="empty-prices-state">
+              <span className="saved-empty-icon" aria-hidden="true"><Settings2 size={19} /></span>
+              <div>
+                <p className="saved-empty-title">No prices set yet</p>
+                <p className="saved-empty-copy">Add a rate for each item, then save this price list.</p>
+              </div>
+            </div>
+          )}
+
+          <form noValidate onSubmit={handleSave} data-testid="form-prices">
+            <div className="settings-card">
+              <div className="price-list-name-row">
+                <label className="price-label" htmlFor="price-list-name">List name</label>
+                <input
+                  className="price-list-name-input"
+                  id="price-list-name"
+                  type="text"
+                  value={draftName}
+                  onChange={(event) => {
+                    setDraftName(event.target.value);
+                    setSaveState('idle');
+                    setValidationMessage('');
+                  }}
+                  placeholder="e.g. Pontypridd"
+                  autoComplete="off"
+                  enterKeyHint="next"
+                  data-testid="input-price-list-name"
+                />
+              </div>
+
+              {QUOTE_ITEMS.map((field) => (
+                <div className="price-row" key={field.key}>
+                  <label className="price-label" htmlFor={`price-${field.key}`}>{field.label}</label>
+                  <div className="currency-input">
+                    <span className="currency-symbol" aria-hidden="true">£</span>
+                    <input
+                      className="price-input"
+                      id={`price-${field.key}`}
+                      inputMode="decimal"
+                      min="0"
+                      step="0.01"
+                      onChange={(event) => updatePrice(field.key, event.target.value)}
+                      placeholder="0.00"
+                      type="number"
+                      value={draft[field.key]}
+                      aria-label={`${field.label} price in pounds`}
+                      aria-describedby={`price-hint-${field.key}`}
+                      aria-invalid={isInvalidPriceInput(draft[field.key])}
+                      enterKeyHint="done"
+                      onFocus={(event) => {
+                        window.requestAnimationFrame(() => {
+                          event.currentTarget.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                        });
+                      }}
+                      data-testid={`input-price-${field.key}`}
+                    />
+                  </div>
+                  <span className="price-hint" id={`price-hint-${field.key}`}>{field.hint}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="save-zone">
+              <button
+                className="save-button"
+                disabled={saveState === 'saving'}
+                type="submit"
+                data-testid="button-save-prices"
+              >
+                {saveState === 'saving' ? (
+                  <>
+                    <LoaderCircle size={17} className="animate-spin" aria-hidden="true" />
+                    Saving list
+                  </>
+                ) : saveState === 'saved' ? (
+                  <>
+                    <Check size={17} aria-hidden="true" />
+                    List saved
+                  </>
+                ) : (
+                  'Save price list'
+                )}
+              </button>
+              {validationMessage && (
+                <p className="form-validation-message" role="alert" data-testid="status-price-validation">
+                  {validationMessage}
+                </p>
+              )}
+              <p className={`save-feedback ${saveState === 'saved' ? 'is-success' : ''}`} aria-live="polite" data-testid="status-save-prices">
+                {saveState === 'saved' ? 'Saved on this device.' : 'Each list is stored independently on this device.'}
+              </p>
+            </div>
+          </form>
+
+          {!isCreating && selectedList && (
+            <div className="delete-list-zone">
+              {deleteConfirmationId === selectedList.id ? (
+                <div className="delete-confirmation" role="alert" data-testid="status-delete-price-list-confirmation">
+                  <p>Delete “{selectedList.name}”? This cannot be undone.</p>
+                  <div className="delete-confirmation-actions">
+                    <button className="secondary-button" type="button" onClick={() => setDeleteConfirmationId(null)} data-testid="button-cancel-delete-price-list">
+                      Keep list
+                    </button>
+                    <button className="danger-button danger-button-solid" type="button" onClick={confirmDelete} data-testid="button-confirm-delete-price-list">
+                      <Trash2 size={16} aria-hidden="true" />
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button className="danger-button" type="button" onClick={requestDelete} data-testid="button-delete-price-list">
+                  <Trash2 size={16} aria-hidden="true" />
+                  Delete this price list
+                </button>
+              )}
+            </div>
+          )}
+        </section>
       </div>
     </AppShell>
   );
+}
+
+function priceSummary(prices: PriceSettings): string {
+  const count = Object.values(prices).filter((price) => price > 0).length;
+  return count === 0 ? 'No prices set' : `${count} of ${QUOTE_ITEMS.length} prices set`;
 }
 
 function normalisePriceInput(value: string): string {
@@ -203,10 +365,19 @@ function isInvalidPriceInput(value: string): boolean {
   return trimmed.startsWith('-') || !Number.isFinite(parsed) || parsed < 0;
 }
 
+function draftToPrices(draft: Record<PriceKey, string>): PriceSettings {
+  return QUOTE_ITEMS.reduce((next, field) => {
+    const value = Number.parseFloat(draft[field.key]);
+    next[field.key] =
+      Number.isFinite(value) && value >= 0 ? Math.round(value * 100) / 100 : 0;
+    return next;
+  }, {} as PriceSettings);
+}
+
 function toDraft(prices: PriceSettings): Record<PriceKey, string> {
-  return (Object.keys(prices) as PriceKey[]).reduce(
-    (draft, key) => {
-      draft[key] = prices[key].toFixed(2);
+  return QUOTE_ITEMS.reduce(
+    (draft, field) => {
+      draft[field.key] = prices[field.key].toFixed(2);
       return draft;
     },
     {} as Record<PriceKey, string>,

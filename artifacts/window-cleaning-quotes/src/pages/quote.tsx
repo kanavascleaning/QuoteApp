@@ -2,7 +2,14 @@ import { ArrowLeft, Check, CircleAlert, MapPin, Minus, Plus, ReceiptText } from 
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useParams } from 'wouter';
 import { AppHeader, AppShell } from '@/components/app-shell';
-import { loadPrices, type PriceKey, type PriceSettings } from '@/lib/prices';
+import {
+  loadLastUsedPriceListId,
+  loadPriceLists,
+  saveLastUsedPriceListId,
+  type PriceKey,
+  type PriceList,
+  type PriceSettings,
+} from '@/lib/prices';
 import { QUOTE_ITEMS } from '@/lib/quote-items';
 import { getQuote, saveQuote as persistQuote, type SavedQuote, type SavedQuoteLineItem } from '@/lib/quotes';
 
@@ -24,19 +31,33 @@ function pounds(value: number): string {
   return `£${value.toFixed(2)}`;
 }
 
+const LEGACY_SNAPSHOT_ID = 'saved-quote-snapshot';
+
 export default function QuotePage() {
   const { id } = useParams<{ id: string }>();
   const [location, setLocation] = useLocation();
   const isEditing = Boolean(id && location.endsWith('/edit'));
-  const [prices, setPrices] = useState<PriceSettings | null>(null);
+  const [priceLists, setPriceLists] = useState<PriceList[] | null>(null);
   const [savedQuote] = useState<SavedQuote | undefined>(() => (isEditing && id ? getQuote(id) : undefined));
+  const [selectedPriceListId, setSelectedPriceListId] = useState('');
   const [address, setAddress] = useState('');
   const [quantities, setQuantities] = useState<QuoteQuantities>(emptyQuantities);
   const [saveMessage, setSaveMessage] = useState('');
 
   useEffect(() => {
-    setPrices(loadPrices());
-  }, []);
+    const loaded = loadPriceLists();
+    setPriceLists(loaded);
+
+    if (savedQuote) {
+      setSelectedPriceListId(savedQuote.priceListId ?? LEGACY_SNAPSHOT_ID);
+      return;
+    }
+
+    const lastUsedId = loadLastUsedPriceListId();
+    setSelectedPriceListId(
+      loaded.some((list) => list.id === lastUsedId) ? lastUsedId ?? loaded[0].id : loaded[0].id,
+    );
+  }, [savedQuote]);
 
   useEffect(() => {
     if (!savedQuote) return;
@@ -49,9 +70,44 @@ export default function QuotePage() {
     );
   }, [savedQuote]);
 
+  const unavailableSnapshot = useMemo<PriceList | undefined>(() => {
+    if (!savedQuote || !priceLists || priceLists.some((list) => list.id === selectedPriceListId)) {
+      return undefined;
+    }
+
+    const prices = savedQuote.lineItems.reduce((next, line) => {
+      next[line.key] = line.unitPrice ?? 0;
+      return next;
+    }, {} as PriceSettings);
+
+    return {
+      id: selectedPriceListId || LEGACY_SNAPSHOT_ID,
+      name: savedQuote.priceListName
+        ? `${savedQuote.priceListName} — no longer available`
+        : 'Saved prices from older quote — no longer available',
+      prices,
+    };
+  }, [priceLists, savedQuote, selectedPriceListId]);
+
+  const activePriceList = useMemo(
+    () =>
+      unavailableSnapshot ??
+      priceLists?.find((list) => list.id === selectedPriceListId) ??
+      priceLists?.[0],
+    [priceLists, selectedPriceListId, unavailableSnapshot],
+  );
+
+  const priceListOptions = useMemo(
+    () =>
+      unavailableSnapshot
+        ? [unavailableSnapshot, ...(priceLists ?? [])]
+        : priceLists ?? [],
+    [priceLists, unavailableSnapshot],
+  );
+
   const lines = useMemo<QuoteLine[]>(() => {
     return QUOTE_ITEMS.map((item) => {
-      const rawPrice = prices?.[item.key];
+      const rawPrice = activePriceList?.prices[item.key];
       const unitPrice =
         typeof rawPrice === 'number' && Number.isFinite(rawPrice) && rawPrice > 0
           ? rawPrice
@@ -68,7 +124,7 @@ export default function QuotePage() {
         isPriced: unitPrice !== null,
       };
     });
-  }, [prices, quantities]);
+  }, [activePriceList, quantities]);
 
   const total = useMemo(
     () => lines.reduce((sum, line) => sum + line.subtotal, 0),
@@ -88,9 +144,15 @@ export default function QuotePage() {
   }
 
   function saveCurrentQuote() {
+    if (!activePriceList) return;
+    const isUnavailableSnapshot = Boolean(unavailableSnapshot && activePriceList.id === unavailableSnapshot.id);
     const saved = persistQuote({
       id: isEditing ? savedQuote?.id : undefined,
       address: address.trim(),
+      priceListId: activePriceList.id,
+      priceListName: isUnavailableSnapshot
+        ? savedQuote?.priceListName ?? 'Saved prices from older quote'
+        : activePriceList.name,
       total,
       lineItems: lines.map((line) => ({
         key: line.key,
@@ -100,6 +162,7 @@ export default function QuotePage() {
         subtotal: line.subtotal,
       })),
     });
+    if (!isUnavailableSnapshot) saveLastUsedPriceListId(activePriceList.id);
     setSaveMessage(isEditing ? 'Quote updated. Opening review…' : 'Quote saved. Opening review…');
     setLocation(`/quote/${saved.id}?saved=${isEditing ? 'updated' : 'saved'}`);
   }
@@ -123,7 +186,7 @@ export default function QuotePage() {
     );
   }
 
-  if (!prices) {
+  if (!priceLists || !activePriceList) {
     return (
       <AppShell>
         <div className="page-wrap">
@@ -157,6 +220,36 @@ export default function QuotePage() {
         </section>
 
         <div className="quote-form">
+          <div className="quote-price-list-card">
+            <label className="quote-field-label" htmlFor="quote-price-list">
+              <ReceiptText size={16} aria-hidden="true" />
+              Price list
+            </label>
+            <select
+              className="price-list-select"
+              id="quote-price-list"
+              value={selectedPriceListId}
+              onChange={(event) => {
+                const nextPriceListId = event.target.value;
+                setSelectedPriceListId(nextPriceListId);
+                if (priceLists.some((list) => list.id === nextPriceListId)) {
+                  saveLastUsedPriceListId(nextPriceListId);
+                }
+                setSaveMessage('');
+              }}
+              data-testid="select-quote-price-list"
+            >
+              {priceListOptions.map((list) => (
+                <option value={list.id} key={list.id}>{list.name}</option>
+              ))}
+            </select>
+            {unavailableSnapshot && (
+              <p className="price-list-unavailable" role="status" data-testid="status-price-list-unavailable">
+                This price list is no longer available. The original saved prices are still shown.
+              </p>
+            )}
+          </div>
+
           <div className="quote-address-card">
             <label className="quote-field-label" htmlFor="quote-address">
               <MapPin size={16} aria-hidden="true" />
