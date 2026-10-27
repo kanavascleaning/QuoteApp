@@ -57,8 +57,51 @@ adb uninstall com.clearpane.fieldquotekit
 ```
 
 You can also open the project in Android Studio and use the **Run** button with
-the connected phone selected. The generated debug APK is unsigned and intended
-for local testing only.
+the connected phone selected. The debug APK is signed with Android's local
+debug key and is intended for testing only.
+
+## Build through GitHub Actions
+
+The repository includes `.github/workflows/build-apk.yml`. It builds the web
+app, syncs Capacitor, compiles a debug APK with Java 21 and Android SDK 36, and
+uploads `window-quote-debug.apk` as a downloadable workflow artifact.
+
+1. Push the project, including the workflow file, to a GitHub repository. If
+   this workspace's repository is not connected to GitHub yet, create an empty
+   GitHub repository, then add it as a remote and push the current `main`
+   branch:
+
+   ```bash
+   git remote add github https://github.com/<OWNER>/<REPOSITORY>.git
+   git push -u github main
+   ```
+
+2. In that repository on GitHub, open **Actions** and select **Build Android
+   debug APK**. The first push that includes the workflow starts a build
+   automatically. For later builds, use **Run workflow**.
+3. Open the completed run, scroll to **Artifacts**, and download
+   **window-quote-debug**. Extract the downloaded ZIP to get
+   `window-quote-debug.apk`.
+4. Transfer the APK to your phone (USB, a trusted cloud drive, or a private
+   message to yourself), then open it on the phone.
+5. If Android asks, allow your file manager or browser to **Install unknown
+   apps**, return to the APK, and tap **Install**. You can turn that permission
+   off again after installation.
+
+The workflow artifact is kept for 14 days. This is a debug APK for testing, not
+a Play Store release. Android signs debug APKs with a debug key; it is not a
+production release signature.
+
+## What differs from the browser version
+
+- The APK works offline for quotes and prices because the app and its data are
+  local. Google Fonts may not load without internet, so the system falls back
+  to its local sans-serif font.
+- APK data is stored privately on that phone and is not shared with the browser
+  version. Installing an update over the existing app keeps its data;
+  uninstalling the app clears its local data.
+- The installed app does not need the Replit preview or API server to create,
+  save, or review quotes.
 
 ## Repeatable development cycle
 
