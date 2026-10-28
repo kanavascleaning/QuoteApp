@@ -10,14 +10,14 @@ repository's GitHub Actions build for a cloud APK, or build on a computer with
 Android Studio, SDK Platform 36, Platform-Tools, and JDK 21.
 
 `android-actions/setup-android@v3` defaults to installing the obsolete SDK
-package `tools`; override its `packages` input explicitly (for example,
-`platform-tools`) and install the required platform/build-tools separately.
+package `tools`; v4 uses `platform-tools`. Keep the `packages` input explicit
+and install the required platform/build-tools separately.
 
 **Why:** Capacitor's Gradle build fails before compilation when no Java runtime
-is present, while the web build and Capacitor sync can still pass. The Android
-setup action's removed `tools` default fails before the project's SDK packages
-are installed.
+is present, while the web build and Capacitor sync can still pass. The v3
+Android setup action's removed `tools` default failed before the project's SDK
+packages were installed.
 
 **How to apply:** Use the project Android testing guide for GitHub Actions,
 local setup, `android:sync`, `assembleDebug`, APK installation, and device
-testing steps. Keep the action's SDK package list explicit.
+testing steps.
