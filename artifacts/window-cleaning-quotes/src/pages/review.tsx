@@ -1,10 +1,10 @@
-import { ArrowLeft, CircleAlert, Edit3, List, MapPin, ReceiptText, Trash2 } from 'lucide-react';
+import { ArrowLeft, CircleAlert, Copy, Edit3, List, MapPin, Printer, ReceiptText, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useParams } from 'wouter';
 import { AppHeader, AppShell } from '@/components/app-shell';
 import { loadPriceLists, type PriceList } from '@/lib/prices';
 import { QUOTE_ITEMS } from '@/lib/quote-items';
-import { deleteQuote, getQuote, type SavedQuote } from '@/lib/quotes';
+import { buildQuotePrintHtml, deleteQuote, formatQuoteSummary, getQuote, type SavedQuote } from '@/lib/quotes';
 
 function pounds(value: number): string {
   return `£${value.toFixed(2)}`;
@@ -18,12 +18,30 @@ function formatDate(value: string): string {
   }).format(new Date(value));
 }
 
+function copyUsingDocumentCommand(text: string): void {
+  const textArea = document.createElement('textarea');
+  textArea.value = text;
+  textArea.setAttribute('readonly', '');
+  textArea.style.position = 'fixed';
+  textArea.style.opacity = '0';
+  document.body.appendChild(textArea);
+  textArea.select();
+  let copied = false;
+  try {
+    copied = document.execCommand('copy');
+  } finally {
+    textArea.remove();
+  }
+  if (!copied) throw new Error('Clipboard copy was unavailable.');
+}
+
 export default function ReviewPage() {
   const { id } = useParams<{ id: string }>();
   const [location, setLocation] = useLocation();
   const [quote, setQuote] = useState<SavedQuote | undefined>(() => (id ? getQuote(id) : undefined));
   const [priceLists, setPriceLists] = useState<PriceList[] | null>(null);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [exportMessage, setExportMessage] = useState('');
 
   useEffect(() => {
     setPriceLists(loadPriceLists());
@@ -41,6 +59,54 @@ export default function ReviewPage() {
     if (!quote) return;
     deleteQuote(quote.id);
     setLocation('/');
+  }
+
+  async function copyQuoteSummary() {
+    if (!quote) return;
+
+    const summary = formatQuoteSummary(quote);
+    try {
+      if (navigator.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(summary);
+        } catch {
+          copyUsingDocumentCommand(summary);
+        }
+      } else {
+        copyUsingDocumentCommand(summary);
+      }
+      setExportMessage('Quote summary copied. You can paste it into a message.');
+    } catch {
+      setExportMessage('Could not copy the quote. Check clipboard permissions and try again.');
+    }
+  }
+
+  function printQuote() {
+    if (!quote) return;
+
+    try {
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        setExportMessage('Allow pop-ups for this app to print or save the quote as a PDF.');
+        return;
+      }
+
+      printWindow.document.open();
+      printWindow.document.write(buildQuotePrintHtml(quote));
+      printWindow.document.close();
+      window.setTimeout(() => {
+        if (printWindow.closed) return;
+        try {
+          printWindow.focus();
+          printWindow.print();
+          setExportMessage('In the print dialog, choose “Save as PDF” to download a copy.');
+        } catch {
+          setExportMessage('Could not open the print dialog. Try allowing pop-ups and printing again.');
+        }
+      }, 200);
+    } catch {
+      setExportMessage('Could not prepare the quote for printing. Please try again.');
+    }
   }
 
   if (!quote) {
@@ -159,6 +225,17 @@ export default function ReviewPage() {
         </div>
 
         <div className="review-actions">
+          <div className="review-export-actions" role="group" aria-label="Share this quote">
+            <button className="save-button" type="button" onClick={printQuote} data-testid="button-export-quote-pdf">
+              <Printer size={17} aria-hidden="true" />
+              Print / save PDF
+            </button>
+            <button className="secondary-button" type="button" onClick={copyQuoteSummary} data-testid="button-copy-quote-summary">
+              <Copy size={17} aria-hidden="true" />
+              Copy summary
+            </button>
+          </div>
+          {exportMessage && <p className="review-export-notice" role="status">{exportMessage}</p>}
           <Link href={`/quote/${quote.id}/edit`} className="save-button" data-testid="link-edit-quote">
             <Edit3 size={17} aria-hidden="true" />
             Edit quote

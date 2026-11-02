@@ -31,6 +31,150 @@ export type SaveQuoteInput = {
 
 const STORAGE_KEY = 'window-cleaning-quotes.saved';
 
+function formatCurrency(value: number): string {
+  return `£${value.toFixed(2)}`;
+}
+
+function formatQuoteDate(value: string): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(new Date(value));
+}
+
+function quotePriceListName(quote: SavedQuote): string {
+  return quote.priceListName?.trim() || 'Saved prices from older quote';
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => {
+    switch (character) {
+      case '&': return '&amp;';
+      case '<': return '&lt;';
+      case '>': return '&gt;';
+      case '"': return '&quot;';
+      default: return '&#39;';
+    }
+  });
+}
+
+export function formatQuoteSummary(quote: SavedQuote): string {
+  const lineRows = quote.lineItems.map((line) => [
+    line.label,
+    `${line.quantity} ${line.quantity === 1 ? 'unit' : 'units'}`,
+    line.unitPrice === null ? 'Not priced' : `${formatCurrency(line.unitPrice)} each`,
+    formatCurrency(line.subtotal),
+  ].join(' | '));
+
+  return [
+    'CLEARPANE',
+    'WINDOW CLEANING QUOTE',
+    '',
+    `Address: ${quote.address.trim() || 'No address'}`,
+    `Price list: ${quotePriceListName(quote)}`,
+    `Quote date: ${formatQuoteDate(quote.createdAt)}`,
+    '',
+    'ITEM | QUANTITY | RATE | LINE TOTAL',
+    ...lineRows,
+    '',
+    `QUOTED TOTAL: ${formatCurrency(quote.total)}`,
+  ].join('\n');
+}
+
+export function buildQuotePrintHtml(quote: SavedQuote): string {
+  const address = quote.address.trim() || 'No address';
+  const lineRows = quote.lineItems.map((line) => `
+    <tr>
+      <td>${escapeHtml(line.label)}</td>
+      <td>${line.quantity}</td>
+      <td>${line.unitPrice === null ? 'Not priced' : `${formatCurrency(line.unitPrice)} each`}</td>
+      <td>${formatCurrency(line.subtotal)}</td>
+    </tr>`).join('');
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Window cleaning quote — ${escapeHtml(address)}</title>
+    <style>
+      @page { size: A4; margin: 20mm; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        color: #1d343b;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 12pt;
+        line-height: 1.5;
+      }
+      main { max-width: 760px; margin: 0 auto; }
+      .brand {
+        color: #17636d;
+        font-size: 11pt;
+        font-weight: 700;
+        letter-spacing: .12em;
+      }
+      h1 { margin: 8px 0 24px; font-size: 28pt; line-height: 1.1; }
+      .details {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px 28px;
+        margin-bottom: 28px;
+        padding: 18px;
+        border: 1px solid #d8e2e3;
+        border-radius: 10px;
+      }
+      .detail-label {
+        margin: 0 0 4px;
+        color: #5c7379;
+        font-size: 9pt;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+      }
+      .detail-value { margin: 0; font-weight: 700; white-space: pre-line; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { padding: 11px 8px; border-bottom: 1px solid #d8e2e3; text-align: left; }
+      th { color: #5c7379; font-size: 9pt; text-transform: uppercase; letter-spacing: .05em; }
+      th:not(:first-child), td:not(:first-child) { text-align: right; }
+      .total {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        margin-top: 22px;
+        padding: 18px 0;
+        border-top: 2px solid #17636d;
+        font-size: 16pt;
+        font-weight: 700;
+      }
+      .note { margin-top: 18px; color: #5c7379; font-size: 9pt; }
+      @media print { body { print-color-adjust: exact; -webkit-print-color-adjust: exact; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="brand">CLEARPANE</div>
+      <h1>Window cleaning quote</h1>
+      <section class="details" aria-label="Quote details">
+        <div><p class="detail-label">Address</p><p class="detail-value">${escapeHtml(address)}</p></div>
+        <div><p class="detail-label">Price list</p><p class="detail-value">${escapeHtml(quotePriceListName(quote))}</p></div>
+        <div><p class="detail-label">Quote date</p><p class="detail-value">${escapeHtml(formatQuoteDate(quote.createdAt))}</p></div>
+      </section>
+      <table>
+        <thead>
+          <tr><th>Item</th><th>Quantity</th><th>Rate</th><th>Line total</th></tr>
+        </thead>
+        <tbody>${lineRows}
+        </tbody>
+      </table>
+      <div class="total"><span>Quoted total</span><span>${formatCurrency(quote.total)}</span></div>
+      <p class="note">Rates and totals shown are from the saved quote snapshot.</p>
+    </main>
+  </body>
+</html>`;
+}
+
 function isPriceKey(value: unknown): value is PriceKey {
   return QUOTE_ITEMS.some((item) => item.key === value);
 }

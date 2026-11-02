@@ -1263,6 +1263,33 @@ a {
   text-decoration: none;
 }
 
+.review-export-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+.review-export-actions .save-button,
+.review-export-actions .secondary-button {
+  min-height: 3.2rem;
+  gap: 0.4rem;
+  padding: 0 0.6rem;
+  font-size: 0.82rem;
+  text-decoration: none;
+}
+
+.review-export-actions .secondary-button {
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+}
+
+.review-export-notice {
+  margin: -0.15rem 0 0;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.78rem;
+  text-align: center;
+}
+
 .danger-button,
 .secondary-button {
   display: inline-flex;
