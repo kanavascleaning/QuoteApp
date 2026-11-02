@@ -393,8 +393,39 @@ a {
 }
 
 .price-lists-section,
-.price-editor-section {
+.price-editor-section,
+.business-contact-section {
   margin-top: 1.6rem;
+}
+
+.business-contact-section {
+  padding-bottom: 1.4rem;
+}
+
+.business-contact-card {
+  padding-top: 0.4rem;
+}
+
+.contact-field {
+  padding: 1rem 0;
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.contact-field:last-child {
+  border-bottom: 0;
+}
+
+.business-contact-other {
+  min-height: 6rem;
+  resize: vertical;
+}
+
+.business-contact-section .contact-save-zone {
+  position: static;
+  bottom: auto;
+  z-index: auto;
+  padding-top: 0;
+  background: transparent;
 }
 
 .list-section-heading,

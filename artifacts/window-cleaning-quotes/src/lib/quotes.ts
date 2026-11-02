@@ -29,7 +29,57 @@ export type SaveQuoteInput = {
   lineItems: SavedQuoteLineItem[];
 };
 
+export type BusinessContactDetails = {
+  businessName: string;
+  phone: string;
+  email: string;
+  website: string;
+  other: string;
+};
+
 const STORAGE_KEY = 'window-cleaning-quotes.saved';
+const BUSINESS_CONTACT_STORAGE_KEY = 'window-cleaning-quotes.business-contact';
+
+export const EMPTY_BUSINESS_CONTACT_DETAILS: BusinessContactDetails = {
+  businessName: '',
+  phone: '',
+  email: '',
+  website: '',
+  other: '',
+};
+
+function normaliseBusinessContactDetails(value: unknown): BusinessContactDetails {
+  if (!value || typeof value !== 'object') return { ...EMPTY_BUSINESS_CONTACT_DETAILS };
+  const details = value as Partial<Record<keyof BusinessContactDetails, unknown>>;
+
+  return Object.keys(EMPTY_BUSINESS_CONTACT_DETAILS).reduce((result, key) => {
+    const field = key as keyof BusinessContactDetails;
+    result[field] = typeof details[field] === 'string' ? details[field] as string : '';
+    return result;
+  }, { ...EMPTY_BUSINESS_CONTACT_DETAILS });
+}
+
+export function loadBusinessContactDetails(): BusinessContactDetails {
+  if (typeof window === 'undefined') return { ...EMPTY_BUSINESS_CONTACT_DETAILS };
+
+  try {
+    const stored = window.localStorage.getItem(BUSINESS_CONTACT_STORAGE_KEY);
+    if (!stored) return { ...EMPTY_BUSINESS_CONTACT_DETAILS };
+    return normaliseBusinessContactDetails(JSON.parse(stored));
+  } catch {
+    return { ...EMPTY_BUSINESS_CONTACT_DETAILS };
+  }
+}
+
+export function saveBusinessContactDetails(
+  details: BusinessContactDetails,
+): BusinessContactDetails {
+  const saved = normaliseBusinessContactDetails(details);
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem(BUSINESS_CONTACT_STORAGE_KEY, JSON.stringify(saved));
+  }
+  return saved;
+}
 
 function formatCurrency(value: number): string {
   return `£${value.toFixed(2)}`;
@@ -47,6 +97,21 @@ function quotePriceListName(quote: SavedQuote): string {
   return quote.priceListName?.trim() || 'Saved prices from older quote';
 }
 
+function contactDetailsLines(details: BusinessContactDetails): string[] {
+  const fields: [string, string][] = [
+    ['Business', details.businessName],
+    ['Phone', details.phone],
+    ['Email', details.email],
+    ['Website', details.website],
+    ['Other', details.other],
+  ];
+  const filledFields = fields
+    .filter(([, value]) => value.trim())
+    .map(([label, value]) => `${label}: ${value.trim()}`);
+
+  return filledFields.length > 0 ? ['CONTACT DETAILS', ...filledFields] : [];
+}
+
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => {
     switch (character) {
@@ -59,17 +124,22 @@ function escapeHtml(value: string): string {
   });
 }
 
-export function formatQuoteSummary(quote: SavedQuote): string {
+export function formatQuoteSummary(
+  quote: SavedQuote,
+  contactDetails: BusinessContactDetails = loadBusinessContactDetails(),
+): string {
   const lineRows = quote.lineItems.map((line) => [
     line.label,
     `${line.quantity} ${line.quantity === 1 ? 'unit' : 'units'}`,
     line.unitPrice === null ? 'Not priced' : `${formatCurrency(line.unitPrice)} each`,
     formatCurrency(line.subtotal),
   ].join(' | '));
+  const contactLines = contactDetailsLines(contactDetails);
 
   return [
     'CLEARPANE',
     'WINDOW CLEANING QUOTE',
+    ...(contactLines.length > 0 ? ['', ...contactLines] : []),
     '',
     `Address: ${quote.address.trim() || 'No address'}`,
     `Price list: ${quotePriceListName(quote)}`,
@@ -82,8 +152,12 @@ export function formatQuoteSummary(quote: SavedQuote): string {
   ].join('\n');
 }
 
-export function buildQuotePrintHtml(quote: SavedQuote): string {
+export function buildQuotePrintHtml(
+  quote: SavedQuote,
+  contactDetails: BusinessContactDetails = loadBusinessContactDetails(),
+): string {
   const address = quote.address.trim() || 'No address';
+  const contactLines = contactDetailsLines(contactDetails);
   const lineRows = quote.lineItems.map((line) => `
     <tr>
       <td>${escapeHtml(line.label)}</td>
@@ -160,6 +234,7 @@ export function buildQuotePrintHtml(quote: SavedQuote): string {
         <div><p class="detail-label">Address</p><p class="detail-value">${escapeHtml(address)}</p></div>
         <div><p class="detail-label">Price list</p><p class="detail-value">${escapeHtml(quotePriceListName(quote))}</p></div>
         <div><p class="detail-label">Quote date</p><p class="detail-value">${escapeHtml(formatQuoteDate(quote.createdAt))}</p></div>
+        ${contactLines.length > 0 ? `<div><p class="detail-label">Business contact</p><p class="detail-value">${contactLines.slice(1).map(escapeHtml).join('\n')}</p></div>` : ''}
       </section>
       <table>
         <thead>

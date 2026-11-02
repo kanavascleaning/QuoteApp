@@ -1,7 +1,12 @@
-import { Check, ListPlus, LoaderCircle, Plus, Settings2, Trash2 } from 'lucide-react';
+import { Check, ContactRound, ListPlus, LoaderCircle, Settings2, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { AppHeader, AppShell } from '@/components/app-shell';
 import { QUOTE_ITEMS } from '@/lib/quote-items';
+import {
+  loadBusinessContactDetails,
+  saveBusinessContactDetails,
+  type BusinessContactDetails,
+} from '@/lib/quotes';
 import {
   ZERO_PRICES,
   createPriceList,
@@ -22,6 +27,10 @@ export default function SettingsPage() {
   const [draftName, setDraftName] = useState('');
   const [draft, setDraft] = useState<Record<PriceKey, string>>(toDraft(ZERO_PRICES));
   const [saveState, setSaveState] = useState<SaveState>('idle');
+  const [businessContact, setBusinessContact] = useState<BusinessContactDetails>(
+    () => loadBusinessContactDetails(),
+  );
+  const [contactSaveState, setContactSaveState] = useState<SaveState>('idle');
   const [validationMessage, setValidationMessage] = useState('');
   const [deleteConfirmationId, setDeleteConfirmationId] = useState<string | null>(null);
 
@@ -106,6 +115,17 @@ export default function SettingsPage() {
     }
 
     window.setTimeout(() => setSaveState('saved'), 220);
+  }
+
+  function handleSaveBusinessContact(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusinessContact(saveBusinessContactDetails(businessContact));
+    setContactSaveState('saved');
+  }
+
+  function updateBusinessContact(field: keyof BusinessContactDetails, value: string) {
+    setBusinessContact((current) => ({ ...current, [field]: value }));
+    setContactSaveState('idle');
   }
 
   function requestDelete() {
@@ -340,6 +360,106 @@ export default function SettingsPage() {
               )}
             </div>
           )}
+        </section>
+
+        <section className="business-contact-section" aria-labelledby="business-contact-title">
+          <div className="settings-heading">
+            <div>
+              <p className="eyebrow">Customer-ready quotes</p>
+              <h2 className="page-heading" id="business-contact-title">Business contact.</h2>
+            </div>
+            <span className="settings-heading-icon" aria-hidden="true">
+              <ContactRound size={22} />
+            </span>
+          </div>
+          <p className="page-intro">
+            Add the details customers can use to reach you. They appear on PDF and copied quote summaries.
+          </p>
+
+          <form onSubmit={handleSaveBusinessContact} data-testid="form-business-contact">
+            <div className="settings-card business-contact-card">
+              <div className="contact-field">
+                <label className="price-label" htmlFor="business-contact-name">Business name</label>
+                <input
+                  className="price-list-name-input"
+                  id="business-contact-name"
+                  type="text"
+                  autoComplete="organization"
+                  value={businessContact.businessName}
+                  onChange={(event) => updateBusinessContact('businessName', event.target.value)}
+                  placeholder="e.g. Clearpane Window Cleaning"
+                  data-testid="input-business-name"
+                />
+              </div>
+              <div className="contact-field">
+                <label className="price-label" htmlFor="business-contact-phone">Phone</label>
+                <input
+                  className="price-list-name-input"
+                  id="business-contact-phone"
+                  type="tel"
+                  autoComplete="tel"
+                  value={businessContact.phone}
+                  onChange={(event) => updateBusinessContact('phone', event.target.value)}
+                  placeholder="Your business phone number"
+                  data-testid="input-business-phone"
+                />
+              </div>
+              <div className="contact-field">
+                <label className="price-label" htmlFor="business-contact-email">Email</label>
+                <input
+                  className="price-list-name-input"
+                  id="business-contact-email"
+                  type="email"
+                  autoComplete="email"
+                  value={businessContact.email}
+                  onChange={(event) => updateBusinessContact('email', event.target.value)}
+                  placeholder="you@example.com"
+                  data-testid="input-business-email"
+                />
+              </div>
+              <div className="contact-field">
+                <label className="price-label" htmlFor="business-contact-website">Website</label>
+                <input
+                  className="price-list-name-input"
+                  id="business-contact-website"
+                  type="text"
+                  autoComplete="url"
+                  value={businessContact.website}
+                  onChange={(event) => updateBusinessContact('website', event.target.value)}
+                  placeholder="yourwebsite.co.uk"
+                  data-testid="input-business-website"
+                />
+              </div>
+              <div className="contact-field">
+                <label className="price-label" htmlFor="business-contact-other">Other contact details</label>
+                <textarea
+                  className="price-list-name-input business-contact-other"
+                  id="business-contact-other"
+                  value={businessContact.other}
+                  onChange={(event) => updateBusinessContact('other', event.target.value)}
+                  placeholder="Add another way for customers to reach you"
+                  data-testid="input-business-other"
+                />
+              </div>
+            </div>
+            <div className="save-zone contact-save-zone">
+              <button className="save-button" type="submit" data-testid="button-save-business-contact">
+                {contactSaveState === 'saved' ? (
+                  <>
+                    <Check size={17} aria-hidden="true" />
+                    Contact details saved
+                  </>
+                ) : (
+                  'Save contact details'
+                )}
+              </button>
+              <p className={`save-feedback ${contactSaveState === 'saved' ? 'is-success' : ''}`} aria-live="polite" data-testid="status-business-contact">
+                {contactSaveState === 'saved'
+                  ? 'Saved on this device. New exports will include these details.'
+                  : 'Optional details are stored on this device.'}
+              </p>
+            </div>
+          </form>
         </section>
       </div>
     </AppShell>
