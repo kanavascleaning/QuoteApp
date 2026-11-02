@@ -3,9 +3,13 @@ import { afterEach, beforeEach, describe, it } from 'node:test';
 import { loadPriceLists, savePriceLists, updatePriceList } from '@/lib/prices';
 import {
   buildQuotePrintHtml,
+  EMPTY_BUSINESS_CONTACT_DETAILS,
   formatQuoteSummary,
   getQuote,
+  loadBusinessContactDetails,
+  saveBusinessContactDetails,
   saveQuote,
+  type BusinessContactDetails,
   type SavedQuoteLineItem,
 } from '@/lib/quotes';
 
@@ -33,6 +37,14 @@ const noContactDetails = {
   email: '',
   website: '',
   other: '',
+};
+
+const businessContactDetails: BusinessContactDetails = {
+  businessName: 'Clearpane Window Cleaning',
+  phone: '01234 567890',
+  email: 'hello@clearpane.example',
+  website: 'clearpane.example',
+  other: 'Text for a free estimate',
 };
 
 describe('saved quote exports', () => {
@@ -66,6 +78,63 @@ describe('saved quote exports', () => {
     });
     return getQuote(saved.id)!;
   }
+
+  it('loads empty defaults and persists business contact details', () => {
+    assert.deepEqual(loadBusinessContactDetails(), EMPTY_BUSINESS_CONTACT_DETAILS);
+
+    assert.deepEqual(saveBusinessContactDetails(businessContactDetails), businessContactDetails);
+    assert.deepEqual(loadBusinessContactDetails(), businessContactDetails);
+  });
+
+  it('includes saved optional contact details in copied text and PDF HTML', () => {
+    const savedQuote = saveHistoricalQuote();
+    saveBusinessContactDetails(businessContactDetails);
+
+    const summary = formatQuoteSummary(savedQuote);
+    const printHtml = buildQuotePrintHtml(savedQuote);
+
+    for (const [label, value] of [
+      ['Business', businessContactDetails.businessName],
+      ['Phone', businessContactDetails.phone],
+      ['Email', businessContactDetails.email],
+      ['Website', businessContactDetails.website],
+      ['Other', businessContactDetails.other],
+    ]) {
+      assert.match(summary, new RegExp(`^${label}: ${value}$`, 'm'));
+      assert.ok(printHtml.includes(`${label}: ${value}`), `PDF HTML should include ${label}`);
+    }
+    assert.match(summary, /^CONTACT DETAILS$/m);
+    assert.match(printHtml, /<p class="detail-label">Business contact<\/p>/);
+  });
+
+  it('escapes unsafe contact characters in PDF HTML', () => {
+    const savedQuote = saveHistoricalQuote();
+    const unsafeDetails: BusinessContactDetails = {
+      ...EMPTY_BUSINESS_CONTACT_DETAILS,
+      businessName: `A&B <Window> "Clean" 'Co'`,
+    };
+
+    const printHtml = buildQuotePrintHtml(savedQuote, unsafeDetails);
+
+    assert.ok(
+      printHtml.includes('Business: A&amp;B &lt;Window&gt; &quot;Clean&quot; &#39;Co&#39;'),
+    );
+    assert.ok(!printHtml.includes(`Business: ${unsafeDetails.businessName}`));
+  });
+
+  it('does not rewrite saved quote data when contact details are updated', () => {
+    const savedQuote = saveHistoricalQuote();
+    const originalSnapshot = structuredClone(savedQuote);
+    const serializedQuotes = window.localStorage.getItem('window-cleaning-quotes.saved');
+
+    saveBusinessContactDetails(businessContactDetails);
+
+    assert.equal(
+      window.localStorage.getItem('window-cleaning-quotes.saved'),
+      serializedQuotes,
+    );
+    assert.deepEqual(getQuote(savedQuote.id), originalSnapshot);
+  });
 
   it('keeps saved quote details in both exports after the current rates change', () => {
     const savedQuote = saveHistoricalQuote();
