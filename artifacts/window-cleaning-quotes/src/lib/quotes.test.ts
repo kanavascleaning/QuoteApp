@@ -1,8 +1,15 @@
 import assert from 'node:assert/strict';
 import { afterEach, beforeEach, describe, it } from 'node:test';
-import { loadPriceLists, savePriceLists, updatePriceList } from '@/lib/prices';
 import {
+  deletePriceList,
+  loadPriceLists,
+  savePriceLists,
+  updatePriceList,
+} from '@/lib/prices';
+import {
+  buildQuoteLineItems,
   buildQuotePrintHtml,
+  createUnavailableQuotePriceList,
   EMPTY_BUSINESS_CONTACT_DETAILS,
   formatQuoteSummary,
   getQuote,
@@ -191,6 +198,56 @@ describe('saved quote exports', () => {
     assert.equal(getQuote(savedQuote.id)?.priceListName, 'Winter 2026');
     assert.deepEqual(getQuote(savedQuote.id)?.lineItems, quoteLines);
     assert.equal(getQuote(savedQuote.id)?.total, 74.5);
+  });
+
+  it('preserves a quote when its price list is deleted and another list remains', () => {
+    const otherPrices = {
+      smallWindow: 99,
+      mediumWindow: 120,
+      largeWindow: 140,
+      bayWindow: 80,
+      normalDoor: 105,
+      frenchDoorSet: 160,
+    };
+    savePriceLists([
+      { id: 'current-rates', name: 'Winter 2026', prices: originalPrices },
+      { id: 'other-rates', name: 'Summer 2027', prices: otherPrices },
+    ]);
+    const originalQuote = saveHistoricalQuote();
+
+    assert.equal(deletePriceList('current-rates'), true);
+    const remainingLists = loadPriceLists();
+    assert.deepEqual(remainingLists.map((list) => list.id), ['other-rates']);
+
+    const recoveredPriceList = createUnavailableQuotePriceList(
+      originalQuote,
+      remainingLists,
+      originalQuote.priceListId!,
+    );
+    assert.ok(recoveredPriceList);
+    assert.equal(recoveredPriceList.name, 'Winter 2026 — no longer available');
+
+    const quantities = Object.fromEntries(
+      originalQuote.lineItems.map((line) => [line.key, line.quantity]),
+    );
+    const recoveredLineItems = buildQuoteLineItems(recoveredPriceList, quantities);
+    const recoveredTotal = recoveredLineItems.reduce((sum, line) => sum + line.subtotal, 0);
+
+    saveQuote({
+      id: originalQuote.id,
+      address: originalQuote.address,
+      priceListId: recoveredPriceList.id,
+      priceListName: originalQuote.priceListName,
+      total: recoveredTotal,
+      lineItems: recoveredLineItems,
+    });
+
+    const reopenedQuote = getQuote(originalQuote.id);
+    assert.ok(reopenedQuote);
+    assert.equal(reopenedQuote.priceListId, 'current-rates');
+    assert.equal(reopenedQuote.priceListName, 'Winter 2026');
+    assert.deepEqual(reopenedQuote.lineItems, originalQuote.lineItems);
+    assert.equal(reopenedQuote.total, originalQuote.total);
   });
 
   it('does not mutate the saved quote while formatting its exports', () => {

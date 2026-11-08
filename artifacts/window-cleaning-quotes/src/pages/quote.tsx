@@ -8,10 +8,17 @@ import {
   saveLastUsedPriceListId,
   type PriceKey,
   type PriceList,
-  type PriceSettings,
 } from '@/lib/prices';
 import { QUOTE_ITEMS } from '@/lib/quote-items';
-import { getQuote, saveQuote as persistQuote, type SavedQuote, type SavedQuoteLineItem } from '@/lib/quotes';
+import {
+  buildQuoteLineItems,
+  createUnavailableQuotePriceList,
+  getQuote,
+  LEGACY_SNAPSHOT_ID,
+  saveQuote as persistQuote,
+  type SavedQuote,
+  type SavedQuoteLineItem,
+} from '@/lib/quotes';
 
 type QuoteQuantities = Record<PriceKey, number>;
 
@@ -30,8 +37,6 @@ function emptyQuantities(): QuoteQuantities {
 function pounds(value: number): string {
   return `£${value.toFixed(2)}`;
 }
-
-const LEGACY_SNAPSHOT_ID = 'saved-quote-snapshot';
 
 export default function QuotePage() {
   const { id } = useParams<{ id: string }>();
@@ -71,22 +76,8 @@ export default function QuotePage() {
   }, [savedQuote]);
 
   const unavailableSnapshot = useMemo<PriceList | undefined>(() => {
-    if (!savedQuote || !priceLists || priceLists.some((list) => list.id === selectedPriceListId)) {
-      return undefined;
-    }
-
-    const prices = savedQuote.lineItems.reduce((next, line) => {
-      next[line.key] = line.unitPrice ?? 0;
-      return next;
-    }, {} as PriceSettings);
-
-    return {
-      id: selectedPriceListId || LEGACY_SNAPSHOT_ID,
-      name: savedQuote.priceListName
-        ? `${savedQuote.priceListName} — no longer available`
-        : 'Saved prices from older quote — no longer available',
-      prices,
-    };
+    if (!savedQuote || !priceLists) return undefined;
+    return createUnavailableQuotePriceList(savedQuote, priceLists, selectedPriceListId);
   }, [priceLists, savedQuote, selectedPriceListId]);
 
   const activePriceList = useMemo(
@@ -106,24 +97,13 @@ export default function QuotePage() {
   );
 
   const lines = useMemo<QuoteLine[]>(() => {
-    return QUOTE_ITEMS.map((item) => {
-      const rawPrice = activePriceList?.prices[item.key];
-      const unitPrice =
-        typeof rawPrice === 'number' && Number.isFinite(rawPrice) && rawPrice > 0
-          ? rawPrice
-          : null;
-      const quantity = quantities[item.key];
-
-      return {
-        key: item.key,
-        label: item.label,
-        hint: item.hint,
-        quantity,
-        unitPrice,
-        subtotal: unitPrice === null ? 0 : quantity * unitPrice,
-        isPriced: unitPrice !== null,
-      };
-    });
+    if (!activePriceList) return [];
+    const lineItems = buildQuoteLineItems(activePriceList, quantities);
+    return lineItems.map((line, index) => ({
+      ...line,
+      hint: QUOTE_ITEMS[index].hint,
+      isPriced: line.unitPrice !== null,
+    }));
   }, [activePriceList, quantities]);
 
   const total = useMemo(

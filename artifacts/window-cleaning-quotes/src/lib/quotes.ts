@@ -1,5 +1,5 @@
 import { QUOTE_ITEMS } from '@/lib/quote-items';
-import type { PriceKey } from '@/lib/prices';
+import type { PriceKey, PriceList, PriceSettings } from '@/lib/prices';
 
 export type SavedQuoteLineItem = {
   key: PriceKey;
@@ -8,6 +8,8 @@ export type SavedQuoteLineItem = {
   unitPrice: number | null;
   subtotal: number;
 };
+
+export const LEGACY_SNAPSHOT_ID = 'saved-quote-snapshot';
 
 export type SavedQuote = {
   id: string;
@@ -28,6 +30,49 @@ export type SaveQuoteInput = {
   total: number;
   lineItems: SavedQuoteLineItem[];
 };
+
+export function createUnavailableQuotePriceList(
+  quote: SavedQuote,
+  priceLists: PriceList[],
+  selectedPriceListId: string,
+): PriceList | undefined {
+  if (priceLists.some((list) => list.id === selectedPriceListId)) return undefined;
+
+  const prices = quote.lineItems.reduce((next, line) => {
+    next[line.key] = line.unitPrice ?? 0;
+    return next;
+  }, {} as PriceSettings);
+
+  return {
+    id: selectedPriceListId || LEGACY_SNAPSHOT_ID,
+    name: quote.priceListName
+      ? `${quote.priceListName} — no longer available`
+      : 'Saved prices from older quote — no longer available',
+    prices,
+  };
+}
+
+export function buildQuoteLineItems(
+  priceList: PriceList,
+  quantities: Partial<Record<PriceKey, number>>,
+): SavedQuoteLineItem[] {
+  return QUOTE_ITEMS.map((item) => {
+    const rawPrice = priceList.prices[item.key];
+    const unitPrice =
+      typeof rawPrice === 'number' && Number.isFinite(rawPrice) && rawPrice > 0
+        ? rawPrice
+        : null;
+    const quantity = quantities[item.key] ?? 0;
+
+    return {
+      key: item.key,
+      label: item.label,
+      quantity,
+      unitPrice,
+      subtotal: unitPrice === null ? 0 : quantity * unitPrice,
+    };
+  });
+}
 
 export type BusinessContactDetails = {
   businessName: string;
