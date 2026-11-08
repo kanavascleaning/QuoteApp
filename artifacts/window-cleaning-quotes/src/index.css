@@ -402,8 +402,84 @@ a {
   padding-bottom: 1.4rem;
 }
 
+.data-backup-section {
+  margin-top: 1.6rem;
+  padding-bottom: 2.5rem;
+}
+
 .business-contact-card {
   padding-top: 0.4rem;
+}
+
+.backup-card {
+  padding: 0.35rem 1rem 1rem;
+}
+
+.backup-action-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.backup-action-copy {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.backup-action-copy strong,
+.backup-preview strong {
+  color: hsl(var(--foreground));
+  font-size: 0.84rem;
+}
+
+.backup-action-copy span,
+.backup-preview span {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.backup-file-field {
+  display: grid;
+  gap: 0.75rem;
+  padding-top: 1rem;
+}
+
+.backup-preview {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.9rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.85rem;
+  background: hsl(var(--secondary) / 0.5);
+}
+
+.backup-preview .save-button {
+  margin-top: 0.45rem;
+}
+
+.backup-status {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.backup-status.is-success {
+  color: hsl(var(--primary));
+}
+
+.backup-status.is-error {
+  color: hsl(var(--destructive));
+}
+
+@media (max-width: 560px) {
+  .backup-action-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
 }
 
 .contact-field {

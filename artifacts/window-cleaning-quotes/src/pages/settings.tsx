@@ -1,7 +1,32 @@
-import { Check, ContactRound, ListPlus, LoaderCircle, Settings2, Trash2 } from 'lucide-react';
+import {
+  Check,
+  ContactRound,
+  Download,
+  FileJson,
+  ListPlus,
+  LoaderCircle,
+  Settings2,
+  Trash2,
+} from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { AppHeader, AppShell } from '@/components/app-shell';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { QUOTE_ITEMS } from '@/lib/quote-items';
+import {
+  createBackup,
+  parseBackupFile,
+  restoreBackup,
+  type PortableBackup,
+} from '@/lib/backup';
 import {
   loadBusinessContactDetails,
   saveBusinessContactDetails,
@@ -33,6 +58,9 @@ export default function SettingsPage() {
   const [contactSaveState, setContactSaveState] = useState<SaveState>('idle');
   const [validationMessage, setValidationMessage] = useState('');
   const [deleteConfirmationId, setDeleteConfirmationId] = useState<string | null>(null);
+  const [selectedBackup, setSelectedBackup] = useState<PortableBackup | null>(null);
+  const [backupStatus, setBackupStatus] = useState<{ kind: 'success' | 'error'; message: string } | null>(null);
+  const [isConfirmingBackupRestore, setIsConfirmingBackupRestore] = useState(false);
 
   useEffect(() => {
     const loaded = loadPriceLists();
@@ -121,6 +149,66 @@ export default function SettingsPage() {
     event.preventDefault();
     setBusinessContact(saveBusinessContactDetails(businessContact));
     setContactSaveState('saved');
+  }
+
+  function handleExportBackup() {
+    try {
+      const backup = createBackup();
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `clearpane-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setBackupStatus({ kind: 'success', message: 'Backup downloaded. Keep the file somewhere safe.' });
+    } catch {
+      setBackupStatus({ kind: 'error', message: 'The backup could not be downloaded. Check your device storage and try again.' });
+    }
+  }
+
+  async function handleBackupFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = '';
+    setSelectedBackup(null);
+    setBackupStatus(null);
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      setBackupStatus({ kind: 'error', message: 'This file is too large to be a valid backup (maximum 10 MB).' });
+      return;
+    }
+
+    try {
+      setSelectedBackup(parseBackupFile(await file.text()));
+    } catch (error) {
+      setBackupStatus({
+        kind: 'error',
+        message: error instanceof Error ? error.message : 'The selected backup could not be read.',
+      });
+    }
+  }
+
+  function handleRestoreBackup() {
+    if (!selectedBackup) return;
+    try {
+      const restored = restoreBackup(selectedBackup);
+      setPriceLists(restored.priceLists);
+      setSelectedListId(restored.priceLists[0].id);
+      setIsCreating(false);
+      setBusinessContact(restored.businessContact);
+      setContactSaveState('idle');
+      setSelectedBackup(null);
+      setBackupStatus({ kind: 'success', message: 'Backup restored on this device.' });
+    } catch (error) {
+      setBackupStatus({
+        kind: 'error',
+        message: error instanceof Error ? error.message : 'The backup could not be restored.',
+      });
+    } finally {
+      setIsConfirmingBackupRestore(false);
+    }
   }
 
   function updateBusinessContact(field: keyof BusinessContactDetails, value: string) {
@@ -461,6 +549,102 @@ export default function SettingsPage() {
             </div>
           </form>
         </section>
+
+        <section className="data-backup-section" aria-labelledby="data-backup-title">
+          <div className="settings-heading">
+            <div>
+              <p className="eyebrow">Moving devices</p>
+              <h2 className="page-heading" id="data-backup-title">Backup your data.</h2>
+            </div>
+            <span className="settings-heading-icon" aria-hidden="true">
+              <FileJson size={22} />
+            </span>
+          </div>
+          <p className="page-intro">
+            Save your quotes, price lists, and business contact details in a file you can restore on another device.
+            Backup files may include customer addresses, so store them somewhere private.
+          </p>
+
+          <div className="settings-card backup-card">
+            <div className="backup-action-row">
+              <div className="backup-action-copy">
+                <strong>Export a backup</strong>
+                <span>Download a copy of your saved information.</span>
+              </div>
+              <button
+                className="small-action-button"
+                type="button"
+                onClick={handleExportBackup}
+                data-testid="button-export-backup"
+              >
+                <Download size={16} aria-hidden="true" />
+                Download backup
+              </button>
+            </div>
+
+            <div className="backup-file-field">
+              <label className="price-label" htmlFor="backup-file">Restore from a backup file</label>
+              <input
+                className="price-list-name-input"
+                id="backup-file"
+                type="file"
+                accept=".json,application/json"
+                onChange={handleBackupFileChange}
+                data-testid="input-backup-file"
+              />
+              {selectedBackup && (
+                <div className="backup-preview" role="status" data-testid="status-backup-preview">
+                  <strong>Backup checked</strong>
+                  <span>
+                    {selectedBackup.quotes.length} {selectedBackup.quotes.length === 1 ? 'quote' : 'quotes'},
+                    {' '}{selectedBackup.priceLists.length} {selectedBackup.priceLists.length === 1 ? 'price list' : 'price lists'},
+                    {' '}· Created {new Date(selectedBackup.createdAt).toLocaleDateString('en-GB')}
+                  </span>
+                  <button
+                    className="save-button"
+                    type="button"
+                    onClick={() => setIsConfirmingBackupRestore(true)}
+                    data-testid="button-restore-backup"
+                  >
+                    Restore backup
+                  </button>
+                </div>
+              )}
+              {backupStatus && (
+                <p
+                  className={`backup-status ${backupStatus.kind === 'error' ? 'is-error' : 'is-success'}`}
+                  role={backupStatus.kind === 'error' ? 'alert' : 'status'}
+                  data-testid="status-backup"
+                >
+                  {backupStatus.message}
+                </p>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <AlertDialog open={isConfirmingBackupRestore} onOpenChange={setIsConfirmingBackupRestore}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Replace saved data with this backup?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This replaces all saved quotes, price lists, and business contact details on this device. This cannot be undone.
+                The backup contains {selectedBackup?.quotes.length ?? 0} {selectedBackup?.quotes.length === 1 ? 'quote' : 'quotes'} and{' '}
+                {selectedBackup?.priceLists.length ?? 0} {selectedBackup?.priceLists.length === 1 ? 'price list' : 'price lists'}.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="danger-button danger-button-solid"
+                onClick={handleRestoreBackup}
+                data-testid="button-confirm-restore-backup"
+              >
+                Replace saved data
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AppShell>
   );

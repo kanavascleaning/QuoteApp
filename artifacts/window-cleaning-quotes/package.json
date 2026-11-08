@@ -7,7 +7,7 @@
     "dev": "vite --config vite.config.ts --host 0.0.0.0",
     "build": "vite build --config vite.config.ts",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
-    "test": "tsx --test src/lib/quotes.test.ts",
+    "test": "tsx --test src/lib/quotes.test.ts src/lib/backup.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "android:sync": "node scripts/android-sync.mjs",
     "android:open": "cap open android",

@@ -37,8 +37,8 @@ export type BusinessContactDetails = {
   other: string;
 };
 
-const STORAGE_KEY = 'window-cleaning-quotes.saved';
-const BUSINESS_CONTACT_STORAGE_KEY = 'window-cleaning-quotes.business-contact';
+export const SAVED_QUOTES_STORAGE_KEY = 'window-cleaning-quotes.saved';
+export const BUSINESS_CONTACT_STORAGE_KEY = 'window-cleaning-quotes.business-contact';
 
 export const EMPTY_BUSINESS_CONTACT_DETAILS: BusinessContactDetails = {
   businessName: '',
@@ -274,7 +274,7 @@ function isValidLineItem(value: unknown): value is SavedQuoteLineItem {
   );
 }
 
-function isValidQuote(value: unknown): value is SavedQuote {
+export function isValidSavedQuote(value: unknown): value is SavedQuote {
   if (!value || typeof value !== 'object') return false;
   const quote = value as Partial<SavedQuote>;
   const lineItems = quote.lineItems;
@@ -286,6 +286,8 @@ function isValidQuote(value: unknown): value is SavedQuote {
     (quote.priceListName === undefined || typeof quote.priceListName === 'string') &&
     typeof quote.createdAt === 'string' &&
     !Number.isNaN(Date.parse(quote.createdAt)) &&
+    (quote.updatedAt === undefined ||
+      (typeof quote.updatedAt === 'string' && !Number.isNaN(Date.parse(quote.updatedAt)))) &&
     typeof quote.total === 'number' &&
     Number.isFinite(quote.total) &&
     quote.total >= 0 &&
@@ -307,12 +309,12 @@ export function loadQuotes(): SavedQuote[] {
   if (typeof window === 'undefined') return [];
 
   try {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
+    const stored = window.localStorage.getItem(SAVED_QUOTES_STORAGE_KEY);
     if (!stored) return [];
     const parsed: unknown = JSON.parse(stored);
     if (!Array.isArray(parsed)) return [];
     return parsed
-      .filter(isValidQuote)
+      .filter(isValidSavedQuote)
       .sort((first, second) => Date.parse(second.createdAt) - Date.parse(first.createdAt));
   } catch {
     return [];
@@ -347,7 +349,7 @@ export function saveQuote(input: SaveQuoteInput): SavedQuote {
   }
 
   if (typeof window !== 'undefined') {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(quotes));
+    window.localStorage.setItem(SAVED_QUOTES_STORAGE_KEY, JSON.stringify(quotes));
   }
   return saved;
 }
@@ -357,7 +359,7 @@ export function deleteQuote(id: string): boolean {
   const nextQuotes = quotes.filter((quote) => quote.id !== id);
   if (nextQuotes.length === quotes.length) return false;
   if (typeof window !== 'undefined') {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextQuotes));
+    window.localStorage.setItem(SAVED_QUOTES_STORAGE_KEY, JSON.stringify(nextQuotes));
   }
   return true;
 }

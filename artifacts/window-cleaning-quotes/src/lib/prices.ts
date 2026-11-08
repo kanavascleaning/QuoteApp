@@ -32,9 +32,9 @@ export const ZERO_PRICES: PriceSettings = {
   frenchDoorSet: 0,
 };
 
-const PRICE_LISTS_STORAGE_KEY = 'window-cleaning-quotes.price-lists';
+export const PRICE_LISTS_STORAGE_KEY = 'window-cleaning-quotes.price-lists';
 const LEGACY_PRICES_STORAGE_KEY = 'window-cleaning-quotes.prices';
-const LAST_USED_STORAGE_KEY = 'window-cleaning-quotes.last-price-list';
+export const LAST_USED_PRICE_LIST_STORAGE_KEY = 'window-cleaning-quotes.last-price-list';
 
 function priceKeys(): PriceKey[] {
   return Object.keys(DEFAULT_PRICES) as PriceKey[];
@@ -61,7 +61,7 @@ function normalisePrices(value: unknown, fallback: PriceSettings): PriceSettings
   }, {} as PriceSettings);
 }
 
-function isValidPriceList(value: unknown): value is PriceList {
+export function isValidPriceList(value: unknown): value is PriceList {
   if (!value || typeof value !== 'object') return false;
   const list = value as Partial<PriceList>;
   if (
@@ -200,13 +200,13 @@ export function getPriceList(id: string): PriceList | undefined {
 
 export function loadLastUsedPriceListId(): string | undefined {
   if (typeof window === 'undefined') return undefined;
-  const id = window.localStorage.getItem(LAST_USED_STORAGE_KEY);
+  const id = window.localStorage.getItem(LAST_USED_PRICE_LIST_STORAGE_KEY);
   return id || undefined;
 }
 
 export function saveLastUsedPriceListId(id: string): void {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem(LAST_USED_STORAGE_KEY, id);
+  window.localStorage.setItem(LAST_USED_PRICE_LIST_STORAGE_KEY, id);
 }
 
 // Compatibility helpers for callers outside the current screens.
