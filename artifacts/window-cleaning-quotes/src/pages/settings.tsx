@@ -550,6 +550,14 @@ export default function SettingsPage() {
           </form>
         </section>
 
+        <section className="app-version-section" aria-labelledby="app-version-title">
+          <p className="section-label" id="app-version-title">App version</p>
+          <div className="settings-card app-version-card">
+            <strong>{import.meta.env.VITE_APP_BUILD_VERSION}</strong>
+            <span>Build shared by the web app and Android APK.</span>
+          </div>
+        </section>
+
         <section className="data-backup-section" aria-labelledby="data-backup-title">
           <div className="settings-heading">
             <div>

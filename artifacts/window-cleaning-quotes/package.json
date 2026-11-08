@@ -5,11 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite --config vite.config.ts --host 0.0.0.0",
-    "build": "vite build --config vite.config.ts",
+    "build": "pnpm run web:build",
+    "web:build": "vite build --config vite.config.ts && node scripts/generate-service-worker.mjs",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
     "test": "tsx --test src/lib/quotes.test.ts src/lib/backup.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "android:sync": "node scripts/android-sync.mjs",
+    "android:build": "node scripts/android-build.mjs",
     "android:open": "cap open android",
     "android:run": "cap run android"
   },

@@ -407,6 +407,88 @@ a {
   padding-bottom: 2.5rem;
 }
 
+.app-version-section {
+  margin-top: 1.6rem;
+}
+
+.app-version-card {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem;
+}
+
+.app-version-card strong {
+  font-family: var(--app-font-mono);
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+
+.app-version-card span {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.76rem;
+}
+
+.pwa-update-prompt {
+  position: fixed;
+  z-index: 100;
+  top: max(0.75rem, env(safe-area-inset-top));
+  left: 50%;
+  display: flex;
+  width: min(calc(100% - 1.5rem), 38rem);
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding: 0.8rem 0.9rem 0.8rem 1rem;
+  transform: translateX(-50%);
+  border: 1px solid hsl(var(--primary-foreground) / 0.16);
+  border-radius: 1rem;
+  background: hsl(var(--foreground));
+  color: hsl(var(--primary-foreground));
+  box-shadow: 0 12px 32px rgba(12, 32, 40, 0.24);
+}
+
+.pwa-update-copy {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.pwa-update-copy strong {
+  font-size: 0.86rem;
+}
+
+.pwa-update-copy span {
+  color: hsl(var(--primary-foreground) / 0.74);
+  font-size: 0.74rem;
+}
+
+.pwa-update-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.pwa-update-actions button {
+  min-height: 2.4rem;
+  padding: 0.45rem 0.7rem;
+  border: 0;
+  border-radius: 0.65rem;
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.pwa-update-actions button:disabled {
+  opacity: 0.72;
+}
+
+.pwa-update-actions .pwa-update-later {
+  background: transparent;
+  color: hsl(var(--primary-foreground) / 0.84);
+  font-weight: 500;
+}
+
 .business-contact-card {
   padding-top: 0.4rem;
 }
@@ -479,6 +561,15 @@ a {
   .backup-action-row {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .pwa-update-prompt {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .pwa-update-actions {
+    width: 100%;
   }
 }
 

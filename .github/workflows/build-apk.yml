@@ -3,12 +3,18 @@ name: Build Android debug APK
 on:
   workflow_dispatch:
   push:
+    branches:
+      - main
     paths:
       - "artifacts/window-cleaning-quotes/**"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
+      - "tsconfig.base.json"
+      - "lib/**"
+      - "scripts/**"
       - ".github/workflows/build-apk.yml"
+      - ".github/workflows/deploy-pwa.yml"
 
 permissions:
   contents: read
@@ -53,12 +59,8 @@ jobs:
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build web app and sync Capacitor
-        run: pnpm --filter @workspace/window-cleaning-quotes run android:sync
-
-      - name: Build debug APK
-        working-directory: artifacts/window-cleaning-quotes/android
-        run: ./gradlew --no-daemon assembleDebug
+      - name: Build and sync Android app
+        run: pnpm --filter @workspace/window-cleaning-quotes run android:build
 
       - name: Give APK a clear filename
         run: cp artifacts/window-cleaning-quotes/android/app/build/outputs/apk/debug/app-debug.apk window-quote-debug.apk

@@ -1,0 +1,75 @@
+name: Deploy Window Quotes PWA
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "artifacts/window-cleaning-quotes/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "tsconfig.base.json"
+      - "lib/**"
+      - "scripts/**"
+      - ".github/workflows/build-apk.yml"
+      - ".github/workflows/deploy-pwa.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build hosted PWA
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v5
+        with:
+          version: 10.26.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build project-site bundle
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}/
+          PORT: 5173
+        run: pnpm --filter @workspace/window-cleaning-quotes run web:build
+
+      - name: Upload Pages bundle
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: artifacts/window-cleaning-quotes/dist/public
+
+  deploy:
+    name: Publish to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+
+    steps:
+      - name: Deploy Pages bundle
+        id: deployment
+        uses: actions/deploy-pages@v4

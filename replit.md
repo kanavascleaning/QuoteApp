@@ -51,7 +51,7 @@ A mobile-first PWA for window cleaners to maintain their standard job prices bef
 
 ## Gotchas
 
-- The Vite config requires `PORT` and `BASE_PATH` when running a direct production build; the managed workflow supplies them automatically.
+- The managed preview supplies `PORT` and `BASE_PATH`. Direct builds default to port 5173 and `/`; set `BASE_PATH` to the repository subpath when building a GitHub Pages project site.
 
 ## Pointers
 

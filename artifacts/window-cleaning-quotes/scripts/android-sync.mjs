@@ -4,7 +4,7 @@ const packageManager = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
 const env = {
   ...process.env,
   PORT: process.env.PORT || '21007',
-  BASE_PATH: process.env.BASE_PATH || '/',
+  BASE_PATH: '/',
 };
 
 function run(args) {
@@ -21,5 +21,5 @@ function run(args) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
-run(['run', 'build']);
+run(['run', 'web:build']);
 run(['exec', 'cap', 'sync', 'android']);

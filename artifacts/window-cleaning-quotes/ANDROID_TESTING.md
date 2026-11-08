@@ -3,6 +3,10 @@
 The Android wrapper uses Capacitor with app ID `com.clearpane.fieldquotekit`.
 The generated Android project lives in `android/`.
 
+For iPhone Home Screen installation, Android Chrome PWA installation, storage
+limitations, update behavior, offline checks, and the hosted app link, see
+[INSTALLATION_AND_TESTING.md](./INSTALLATION_AND_TESTING.md).
+
 ## One-time setup on your computer
 
 Install:
@@ -36,10 +40,8 @@ The device should appear as `device`, not `unauthorized`.
 Run these commands from the repository root after changing the web app:
 
 ```bash
-pnpm --filter @workspace/window-cleaning-quotes run android:sync
-cd artifacts/window-cleaning-quotes/android
-./gradlew assembleDebug
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+pnpm --filter @workspace/window-cleaning-quotes run android:build
+adb install -r artifacts/window-cleaning-quotes/android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
 The APK is created at:
@@ -47,6 +49,11 @@ The APK is created at:
 ```text
 artifacts/window-cleaning-quotes/android/app/build/outputs/apk/debug/app-debug.apk
 ```
+
+The equivalent explicit web-only build is
+`pnpm --filter @workspace/window-cleaning-quotes run web:build`. Both builds use
+the same app sources; Android uses the root base path while hosted builds set
+their base path through `BASE_PATH`.
 
 `-r` reinstalls the debug build without removing the app's local data. To
 simulate a first install and clear saved prices and quotes, uninstall the app
@@ -64,7 +71,9 @@ debug key and is intended for testing only.
 
 The repository includes `.github/workflows/build-apk.yml`. It builds the web
 app, syncs Capacitor, compiles a debug APK with Java 21 and Android SDK 36, and
-uploads `window-quote-debug.apk` as a downloadable workflow artifact.
+uploads `window-quote-debug.apk` as a downloadable workflow artifact. The same
+push to `main` also runs `.github/workflows/deploy-pwa.yml` to publish the hosted
+app.
 
 1. Push the project, including the workflow file, to a GitHub repository. If
    this workspace's repository is not connected to GitHub yet, create an empty
@@ -76,9 +85,11 @@ uploads `window-quote-debug.apk` as a downloadable workflow artifact.
    git push -u github main
    ```
 
-2. In that repository on GitHub, open **Actions** and select **Build Android
-   debug APK**. The first push that includes the workflow starts a build
-   automatically. For later builds, use **Run workflow**.
+2. In that repository on GitHub, open **Settings → Pages** and set **Build and
+   deployment → Source** to **GitHub Actions**. This is a one-time owner action.
+   Then open **Actions** and select **Build Android debug APK** or **Deploy
+   Window Quotes PWA**. Pushes to `main` that change shared app/build files run
+   both workflows automatically. For later manual builds, use **Run workflow**.
 3. Open the completed run, scroll to **Artifacts**, and download
    **window-quote-debug**. Extract the downloaded ZIP to get
    `window-quote-debug.apk`.
