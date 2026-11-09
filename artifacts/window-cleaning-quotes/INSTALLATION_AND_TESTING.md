@@ -77,5 +77,17 @@ the APK separately if it is used; its storage is not the Chrome PWA's storage.
 6. Restore networking and confirm the app reconnects and can receive a later
    web update without deleting saved data.
 
+### Reported real-device results — November 9, 2026
+
+- **iPhone Home Screen:** The user reported that price lists and a quote remained
+  after closing and reopening the app.
+- **Android Chrome installed PWA:** The user reported that creating price lists
+  and a quote, closing and reopening, launching offline, and applying a web
+  update all worked; saved data remained available.
+- **Storage separation:** The user observed that data appeared separate among
+  browser tabs, installed PWAs, and the Android APK. Exact pair-by-pair results
+  and device, browser, and OS versions were not recorded. Treat this as an
+  observation from one test setup, not a guarantee for every device.
+
 For manual APK build/install steps and Android device setup, see
 [ANDROID_TESTING.md](./ANDROID_TESTING.md).

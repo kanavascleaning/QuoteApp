@@ -114,6 +114,15 @@ production release signature.
 - The installed app does not need the Replit preview or API server to create,
   save, or review quotes.
 
+## Reported Android PWA device results
+
+On November 9, 2026, the user reported that saved price lists and a quote
+survived closing and reopening the Android Chrome PWA, offline launch, and a web
+update. They also observed that data appeared separate among browser tabs, the
+installed PWA, and the Android APK. Device, browser, and OS versions and exact
+pair-by-pair comparisons were not recorded; see
+[INSTALLATION_AND_TESTING.md](./INSTALLATION_AND_TESTING.md) for the full report.
+
 ## Repeatable development cycle
 
 After web code changes:

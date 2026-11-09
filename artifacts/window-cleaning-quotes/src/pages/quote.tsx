@@ -248,8 +248,9 @@ export default function QuotePage() {
               autoComplete="street-address"
               enterKeyHint="done"
               onFocus={(event) => {
+                const input = event.currentTarget;
                 window.requestAnimationFrame(() => {
-                  event.currentTarget.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                  input.scrollIntoView({ block: 'center', behavior: 'smooth' });
                 });
               }}
               data-testid="input-quote-address"
